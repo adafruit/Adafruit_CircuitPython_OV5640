@@ -33,10 +33,18 @@ Implementation Notes
 
 # imports
 
+import pwmio
+from adafruit_bus_device.i2c_device import I2CDevice
+
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_ov5640.git"
 
 from micropython import const
+
+OV5640_COLOR_RGB = 0
+OV5640_COLOR_YUV = 1
+OV5640_COLOR_GRAYSCALE = 2
+OV5640_COLOR_JPEG = 3
 
 # fmt: off
 _SYSTEM_CTROL0 = const(0x3008)
@@ -46,6 +54,8 @@ _SYSTEM_CTROL0 = const(0x3008)
 # Bit[4]: SRB clock SYNC enable
 # Bit[3]: Isolation suspend select
 # Bit[2:0]: Not used
+
+_CHIP_ID_HIGH = const(0x300A)
 
 _DRIVE_CAPABILITY = const(0x302C)
 # Bit[7:6]:
@@ -295,6 +305,49 @@ _TIMING_TC_REG20_VFLIP = const(0x06)
 # Vertical flip enable
 _TIMING_TC_REG21_HMIRROR = const(0x06)
 # Horizontal mirror enable
+
+OV5640_SIZE_96X96 = 0  # 96x96
+OV5640_SIZE_QQVGA = 1  # 160x120
+OV5640_SIZE_QCIF = 2  # 176x144
+OV5640_SIZE_HQVGA = 3  # 240x176
+OV5640_SIZE_240X240 = 4  # 240x240
+OV5640_SIZE_QVGA = 5  # 320x240
+OV5640_SIZE_CIF = 6  # 400x296
+OV5640_SIZE_HVGA = 7  # 480x320
+OV5640_SIZE_VGA = 8  # 640x480
+OV5640_SIZE_SVGA = 9  # 800x600
+OV5640_SIZE_XGA = 10  # 1024x768
+OV5640_SIZE_HD = 11  # 1280x720
+OV5640_SIZE_SXGA = 12  # 1280x1024
+OV5640_SIZE_UXGA = 13  # 1600x1200
+
+_ASPECT_RATIO_4X3 = const(0)
+_ASPECT_RATIO_3X2 = const(1)
+_ASPECT_RATIO_16X10 = const(2)
+_ASPECT_RATIO_5X3 = const(3)
+_ASPECT_RATIO_16X9 = const(4)
+_ASPECT_RATIO_21X9 = const(5)
+_ASPECT_RATIO_5X4 = const(6)
+_ASPECT_RATIO_1X1 = const(7)
+_ASPECT_RATIO_9X16 = const(8)
+
+_resolution_info = [
+    [96, 96, _ASPECT_RATIO_1X1],  # 96x96
+    [160, 120, _ASPECT_RATIO_4X3],  # QQVGA
+    [176, 144, _ASPECT_RATIO_5X4],  # QCIF
+    [240, 176, _ASPECT_RATIO_4X3],  # HQVGA
+    [240, 240, _ASPECT_RATIO_1X1],  # 240x240
+    [320, 240, _ASPECT_RATIO_4X3],  # QVGA
+    [400, 296, _ASPECT_RATIO_4X3],  # CIF
+    [480, 320, _ASPECT_RATIO_3X2],  # HVGA
+    [640, 480, _ASPECT_RATIO_4X3],  # VGA
+    [800, 600, _ASPECT_RATIO_4X3],  # SVGA
+    [1024, 768, _ASPECT_RATIO_4X3],  # XGA
+    [1280, 720, _ASPECT_RATIO_16X9],  # HD
+    [1280, 1024, _ASPECT_RATIO_5X4],  # SXGA
+    [1600, 1200, _ASPECT_RATIO_4X3],  # UXGA
+]
+
 
 _ratio_table = [
     #  mw,   mh,  sx,  sy,   ex,   ey, ox, oy,   tx,   ty
@@ -649,10 +702,10 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
             i2c.write(b)
 
     def _write_register16(self, reg, value):
-        _write_register(reg, value >> 8)
-        _write_register(reg+1, value & 0xff)
+        self._write_register(reg, value >> 8)
+        self._write_register(reg+1, value & 0xff)
 
-    def _read_register(self, reg, value):
+    def _read_register(self, reg):
         b = bytearray(2)
         b[0] = reg >> 8
         b[1] = reg & 0xff
@@ -661,9 +714,9 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
             i2c.readinto(b, end=1)
         return b[0]
 
-    def _read_register16(self, reg, value):
-        hi = _read_register(reg)
-        lo = _read_register(reg+1)
+    def _read_register16(self, reg):
+        hi = self._read_register(reg)
+        lo = self._read_register(reg+1)
         return (hi << 8) | lo
 
     def _write_list(self, reg_list):
@@ -672,5 +725,331 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
             time.sleep(0.001)
 
 
-class OV2640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
-    pass
+class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
+    def __init__(
+        self,
+        i2c_bus,
+        data_pins,
+        clock,
+        vsync,
+        href,
+        shutdown=None,
+        reset=None,
+        mclk=None,
+        mclk_frequency=24_000_000,
+        i2c_address=0x3c,
+        size=OV5640_SIZE_QQVGA,
+    ):  # pylint: disable=too-many-arguments
+        """
+        Args:
+            i2c_bus (busio.I2C): The I2C bus used to configure the OV5640
+            data_pins (List[microcontroller.Pin]): A list of 8 data pins, in order.
+            clock (microcontroller.Pin): The pixel clock from the OV5640.
+            vsync (microcontroller.Pin): The vsync signal from the OV5640.
+            href (microcontroller.Pin): The href signal from the OV5640, \
+                sometimes inaccurately called hsync.
+            shutdown (Optional[microcontroller.Pin]): If not None, the shutdown
+                signal to the camera, also called the powerdown or enable pin.
+            reset (Optional[microcontroller.Pin]): If not None, the reset signal
+                to the camera.
+            mclk (Optional[microcontroller.Pin]): The pin on which to create a
+                master clock signal, or None if the master clock signal is
+                already being generated.
+            mclk_frequency (int): The frequency of the master clock to generate, \
+                ignored if mclk is None, requred if it is specified
+            i2c_address (int): The I2C address of the camera.
+        """
+
+        # Initialize the master clock
+        if mclk:
+            self._mclk_pwm = pwmio.PWMOut(mclk, frequency=mclk_frequency)
+            self._mclk_pwm.duty_cycle = 32768
+        else:
+            self._mclk_pwm = None
+
+        if shutdown:
+            self._shutdown = digitalio.DigitalInOut(shutdown)
+            self._shutdown.switch_to_output(True)
+            time.sleep(0.1)
+            self._shutdown.switch_to_output(False)
+            time.sleep(0.3)
+        else:
+            self._shutdown = None
+
+        if reset:
+            self._reset = digitalio.DigitalInOut(reset)
+            self._reset.switch_to_output(False)
+            time.sleep(0.1)
+            self._reset.switch_to_output(True)
+            time.sleep(0.1)
+        else:
+            self._reset = None
+
+        # Now that the master clock is running, we can initialize i2c comms
+        super().__init__(i2c_bus, i2c_address)
+
+        # Perform a software reset
+        
+
+        return
+
+        self._colorspace = OV5640_COLOR_RGB
+        self._w = None
+        self._h = None
+        self._size = None
+        self._test_pattern = False
+        self.size = size
+
+        self._flip_x = False
+        self._flip_y = False
+
+        self.gain_ceiling = _COM9_AGC_GAIN_2x
+        self.bpc = False
+        self.wpc = True
+        self.lenc = True
+
+        # self._sensor_init()
+
+        self._imagecapture = imagecapture.ParallelImageCapture(
+            data_pins=data_pins, clock=clock, vsync=vsync, href=href
+        )
+
+    chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xffff)
+
+    def capture(self, buf):
+        """Capture an image into the buffer.
+
+        Args:
+            buf (Union[bytearray, memoryview]): A WritableBuffer to contain the \
+                captured image.  Note that this can be a ulab array or a displayio Bitmap.
+        """
+        self._imagecapture.capture(buf)
+        if self.colorspace == OV5640_COLOR_JPEG:
+            eoi = buf.find(b"\xff\xd9")
+            if eoi != -1:
+                # terminate the JPEG data just after the EOI marker
+                return memoryview(buf)[: eoi + 2]
+        return None
+
+
+    @property
+    def capture_buffer_size(self):
+        """Return the size of capture buffer to use with current resolution & colorspace settings"""
+        if self.colorspace == OV5640_COLOR_JPEG:
+            return self.width * self.height // 5
+        return self.width * self.height * 2
+
+    @property
+    def mclk_frequency(self):
+        """Get the actual frequency the generated mclk, or None"""
+        return self._mclk_pwm.frequency if self._mclk_pwm else None
+
+    @property
+    def width(self):
+        """Get the image width in pixels.  A buffer of 2*width*height bytes \
+        stores a whole image."""
+        return self._w
+
+    @property
+    def height(self):
+        """Get the image height in pixels.  A buffer of 2*width*height bytes \
+        stores a whole image."""
+        return self._h
+
+    @property
+    def colorspace(self):
+        """Get or set the colorspace, one of the ``OV5640_COLOR_`` constants."""
+        return self._colorspace
+
+    @colorspace.setter
+    def colorspace(self, colorspace):
+        self._colorspace = colorspace
+        self._set_size_and_colorspace()
+
+    def _set_colorspace(self):
+        colorspace = self._colorspace
+        settings = _ov5640_color_settings[colorspace]
+
+        self._write_list(settings)
+        # written twice?
+        self._write_list(settings)
+        time.sleep(0.01)
+
+    def deinit(self):
+        """Deinitialize the camera"""
+        self._imagecapture.deinit()
+        if self._mclk_pwm:
+            self._mclk_pwm.deinit()
+        if self._shutdown:
+            self._shutdown.deinit()
+        if self._reset:
+            self._reset.deinit()
+
+
+    @property
+    def size(self):
+        """Get or set the captured image size, one of the ``OV5640_SIZE_`` constants."""
+        return self._size
+
+    def _set_size_and_colorspace(self):
+        size = self._size
+        width, height, ratio = _resolution_info[size]
+        offset_x, offset_y, max_x, max_y = _ratio_table[ratio]
+        mode = _OV5640_MODE_UXGA
+        if size <= OV5640_SIZE_CIF:
+            mode = _OV5640_MODE_CIF
+            max_x //= 4
+            max_y //= 4
+            offset_x //= 4
+            offset_y //= 4
+            if max_y > 296:
+                max_y = 296
+
+        elif size <= OV5640_SIZE_SVGA:
+            mode = _OV5640_MODE_SVGA
+            max_x //= 2
+            max_y //= 2
+            offset_x //= 2
+            offset_y //= 2
+
+        self._set_window(mode, offset_x, offset_y, max_x, max_y, width, height)
+
+    @size.setter
+    def size(self, size):
+        self._size = size
+        self._set_size_and_colorspace()
+
+    def _set_flip(self):
+        bits = 0
+        if self._flip_x:
+            bits |= _REG04_HFLIP_IMG
+        if self._flip_y:
+            bits |= _REG04_VFLIP_IMG | _REG04_VREF_EN
+        self._write_bank_register(_BANK_SENSOR, _REG04, _REG04_SET(bits))
+
+    @property
+    def flip_x(self):
+        """Get or set the X-flip flag"""
+        return self._flip_x
+
+    @flip_x.setter
+    def flip_x(self, value):
+        self._flip_x = bool(value)
+        self._set_flip()
+
+    @property
+    def flip_y(self):
+        """Get or set the Y-flip flag"""
+        return self._flip_y
+
+    @flip_y.setter
+    def flip_y(self, value):
+        self._flip_y = bool(value)
+        self._set_flip()
+
+    @property
+    def product_id(self):
+        """Get the product id (PID) register.  The expected value is 0x26."""
+        return self._read_bank_register(_BANK_SENSOR, _REG_PID)
+
+    @property
+    def product_version(self):
+        """Get the version (VER) register.  The expected value is 0x4x."""
+        return self._read_bank_register(_BANK_SENSOR, _REG_VER)
+
+    def _set_window(
+        self, mode, offset_x, offset_y, max_x, max_y, width, height
+    ):  # pylint: disable=too-many-arguments, too-many-locals
+        self._w = width
+        self._h = height
+
+        max_x //= 4
+        max_y //= 4
+        width //= 4
+        height //= 4
+
+        win_regs = [
+            _BANK_SEL,
+            _BANK_DSP,
+            _HSIZE,
+            max_x & 0xFF,
+            _VSIZE,
+            max_y & 0xFF,
+            _XOFFL,
+            offset_x & 0xFF,
+            _YOFFL,
+            offset_y & 0xFF,
+            _VHYX,
+            ((max_y >> 1) & 0x80)
+            | ((offset_y >> 4) & 0x70)
+            | ((max_x >> 5) & 0x08)
+            | ((offset_y >> 8) & 0x07),
+            _TEST,
+            (max_x >> 2) & 0x80,
+            _ZMOW,
+            (width) & 0xFF,
+            _ZMOH,
+            (height) & 0xFF,
+            _ZMHH,
+            ((height >> 6) & 0x04) | ((width >> 8) & 0x03),
+        ]
+
+        pclk_auto = 0
+        pclk_div = 8
+        clk_2x = 0
+        clk_div = 0
+
+        if self._colorspace != OV5640_COLOR_JPEG:
+            pclk_auto = 1
+            clk_div = 7
+
+        if mode == _OV5640_MODE_CIF:
+            regs = _ov5640_settings_to_cif
+            if self._colorspace != OV5640_COLOR_JPEG:
+                clk_div = 3
+        elif mode == _OV5640_MODE_SVGA:
+            regs = _ov5640_settings_to_svga
+        else:
+            regs = _ov5640_settings_to_uxga
+            pclk_div = 12
+
+        clk = clk_div | (clk_2x << 7)
+        pclk = pclk_div | (pclk_auto << 7)
+
+        self._write_bank_register(_BANK_DSP, _R_BYPASS, _R_BYPASS_DSP_BYPAS)
+        self._write_list(regs)
+        self._write_list(win_regs)
+        self._write_bank_register(_BANK_SENSOR, _CLKRC, clk)
+
+        self._write_list(win_regs)
+        self._write_bank_register(_BANK_SENSOR, _CLKRC, clk)
+        self._write_bank_register(_BANK_DSP, _R_DVP_SP, pclk)
+        self._write_register(_R_BYPASS, _R_BYPASS_DSP_EN)
+        time.sleep(0.01)
+
+        # Reestablish colorspace
+        self._set_colorspace()
+
+        # Reestablish test pattern
+        if self._test_pattern:
+            self.test_pattern = self._test_pattern
+
+    @property
+    def exposure(self):
+        """The exposure level of the sensor"""
+        aec_9_2 = self._get_reg_bits(_BANK_SENSOR, _AEC, 0, 0xFF)
+        aec_15_10 = self._get_reg_bits(_BANK_SENSOR, _REG45, 0, 0b111111)
+        aec_1_0 = self._get_reg_bits(_BANK_SENSOR, _REG04, 0, 0b11)
+
+        return aec_1_0 | (aec_9_2 << 2) | (aec_15_10 << 10)
+
+    @exposure.setter
+    def exposure(self, exposure):
+        aec_1_0 = exposure & 0x11
+        aec_9_2 = (exposure >> 2) & 0b11111111
+        aec_15_10 = exposure >> 10
+
+        self._set_reg_bits(_BANK_SENSOR, _AEC, 0, 0xFF, aec_9_2)
+        self._set_reg_bits(_BANK_SENSOR, _REG45, 0, 0b111111, aec_15_10)
+        self._set_reg_bits(_BANK_SENSOR, _REG04, 0, 0b11, aec_1_0)
+
