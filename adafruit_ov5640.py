@@ -33,6 +33,7 @@ Implementation Notes
 
 # imports
 import time
+import imagecapture
 import pwmio
 from adafruit_bus_device.i2c_device import I2CDevice
 
@@ -695,7 +696,6 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
 
     def _write_register(self, reg, value):
         b = bytearray(3)
-        print(f"_write_register {reg:04x} := {value:02x}")
         b[0] = reg >> 8
         b[1] = reg & 0xff
         b[1] = value
@@ -795,6 +795,10 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._write_list(_sensor_default_regs)
 
+        self._imagecapture = imagecapture.ParallelImageCapture(
+            data_pins=data_pins, clock=clock, vsync=vsync, href=href
+        )
+
         return
 
         self._colorspace = OV5640_COLOR_RGB
@@ -813,10 +817,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self.lenc = True
 
         # self._sensor_init()
-
-        self._imagecapture = imagecapture.ParallelImageCapture(
-            data_pins=data_pins, clock=clock, vsync=vsync, href=href
-        )
 
     chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xffff)
 
