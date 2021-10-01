@@ -32,7 +32,7 @@ Implementation Notes
 """
 
 # imports
-
+import time
 import pwmio
 from adafruit_bus_device.i2c_device import I2CDevice
 
@@ -695,6 +695,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
 
     def _write_register(self, reg, value):
         b = bytearray(3)
+        print(f"_write_register {reg:04x} := {value:02x}")
         b[0] = reg >> 8
         b[1] = reg & 0xff
         b[1] = value
@@ -721,8 +722,12 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
 
     def _write_list(self, reg_list):
         for i in range(0, len(reg_list), 2):
-            self._write_register(reg_list[i], reg_list[i + 1])
-            time.sleep(0.001)
+            register = reg_list[i]
+            value = reg_list[i+1]
+            if register == _REG_DLY:
+                time.sleep(value / 1000)
+            else:
+                self._write_register(register, value)
 
 
 class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
@@ -788,8 +793,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         # Now that the master clock is running, we can initialize i2c comms
         super().__init__(i2c_bus, i2c_address)
 
-        # Perform a software reset
-        
+        self._write_list(_sensor_default_regs)
 
         return
 
