@@ -347,6 +347,11 @@ _resolution_info = [
     [1280, 720, _ASPECT_RATIO_16X9],  # HD
     [1280, 1024, _ASPECT_RATIO_5X4],  # SXGA
     [1600, 1200, _ASPECT_RATIO_4X3],  # UXGA
+    [2560, 1440, _ASPECT_RATIO_16X9], # QHD 
+    [2560, 1600, _ASPECT_RATIO_16X10], # WQXGA
+    [1088, 1920, _ASPECT_RATIO_9X16], # Portrait FHD  
+    [2560, 1920, _ASPECT_RATIO_4X3], # QSXGA 
+
 ]
 
 
@@ -362,6 +367,9 @@ _ratio_table = [
     [1920, 1920, 320, 0, 2543, 1951, 32, 16, 2684, 1968],  # 1x1
     [1088, 1920, 736, 0, 1887, 1951, 32, 16, 1884, 1968],  # 9x16
 ]
+
+_pll_pre_div2x_factors = [1, 1, 2, 3, 4, 1.5, 6, 2.5, 8]
+_pll_pclk_root_div_factors = [1,2,4,8]
 
 _REG_DLY = const(0xFFFF)
 _REGLIST_TAIL = const(0x0000)
@@ -702,6 +710,10 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         with self._i2c_device as i2c:
             i2c.write(b)
 
+    def _write_addr_reg(self, reg, x_value, y_value):
+        self._write_register16(reg, x_value)
+        self._write_register16(reg+2, y_value)
+
     def _write_register16(self, reg, value):
         self._write_register(reg, value >> 8)
         self._write_register(reg+1, value & 0xff)
@@ -728,6 +740,13 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
                 time.sleep(value / 1000)
             else:
                 self._write_register(register, value)
+
+    def _write_reg_bits(self, reg, mask, enable):
+        val = self._read_register(reg)
+        if enable:
+            val |= mask
+        else:
+            val &= ~mask
 
 
 class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
@@ -799,24 +818,15 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             data_pins=data_pins, clock=clock, vsync=vsync, href=href
         )
 
-        return
-
         self._colorspace = OV5640_COLOR_RGB
+        self._flip_x = False
+        self._flip_y = False
         self._w = None
         self._h = None
         self._size = None
         self._test_pattern = False
+        self._binning = False
         self.size = size
-
-        self._flip_x = False
-        self._flip_y = False
-
-        self.gain_ceiling = _COM9_AGC_GAIN_2x
-        self.bpc = False
-        self.wpc = True
-        self.lenc = True
-
-        # self._sensor_init()
 
     chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xffff)
 
@@ -870,14 +880,61 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._colorspace = colorspace
         self._set_size_and_colorspace()
 
+    def _set_image_options(self):
+        reg20 = reg21 = reg4514 = reg4514_test = 0
+        if self.colorspace == OV5640_COLOR_JPEG:
+            reg21 |= 0x20
+
+        if self._binning:
+            reg20 |= 1
+            reg21 |= 1
+            reg4514_test |= 4
+        else:
+            reg20 |= 0x40
+
+        if self._flip_y:
+            reg20 |= 0x06
+            reg4514_test |= 1
+
+        if self._flip_x:
+            reg21 |= 0x06
+            reg4514_test |= 2
+
+        if reg4514_test == 0:
+            reg4514 = 0x88
+        elif reg4514_test == 1:
+            reg4514 = 0x00
+        elif reg4514_test == 2:
+            reg4514 = 0xbb
+        elif reg4514_test == 3:
+            reg4514 = 0x00
+        elif reg4514_test == 4:
+            reg4514 = 0xaa
+        elif reg4514_test == 5:
+            reg4514 = 0xbb
+        elif reg4514_test == 6:
+            reg4514 = 0xbb
+        elif reg4514_test == 7:
+            reg4514 = 0xaa
+
+        self._write_register(_TIMING_TC_REG20, reg20)
+        self._write_register(_TIMING_TC_REG21, reg21)
+        self._write_register(0x4514, reg4514)
+
+        if self._binning:
+            self._write_register(0x4520, 0x10)
+            self._write_register(_X_INCREMENT, 0x11)
+            self._write_register(_Y_INCREMENT, 0x11)
+        else:
+            self._write_register(0x4520, 0x0b)
+            self._write_register(_X_INCREMENT, 0x31)
+            self._write_register(_Y_INCREMENT, 0x31)
+
     def _set_colorspace(self):
         colorspace = self._colorspace
         settings = _ov5640_color_settings[colorspace]
 
         self._write_list(settings)
-        # written twice?
-        self._write_list(settings)
-        time.sleep(0.01)
 
     def deinit(self):
         """Deinitialize the camera"""
@@ -896,40 +953,77 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         return self._size
 
     def _set_size_and_colorspace(self):
+        print("set size and colorspace")
         size = self._size
         width, height, ratio = _resolution_info[size]
-        offset_x, offset_y, max_x, max_y = _ratio_table[ratio]
-        mode = _OV5640_MODE_UXGA
-        if size <= OV5640_SIZE_CIF:
-            mode = _OV5640_MODE_CIF
-            max_x //= 4
-            max_y //= 4
-            offset_x //= 4
-            offset_y //= 4
-            if max_y > 296:
-                max_y = 296
+        max_width, max_height, start_x, start_y, end_x, end_y, offset_x, offset_y, total_x, total_y = _ratio_table[ratio]
 
-        elif size <= OV5640_SIZE_SVGA:
-            mode = _OV5640_MODE_SVGA
-            max_x //= 2
-            max_y //= 2
-            offset_x //= 2
-            offset_y //= 2
+        self._binning = (width <= max_width//2) and (height <= max_height//2);
+        self._scale = not ((width == max_width and height == max_h) or (width == max_width//2 and height == max_height//2))
 
-        self._set_window(mode, offset_x, offset_y, max_x, max_y, width, height)
+        self._write_addr_reg(_X_ADDR_ST_H, start_x, start_y)
+        self._write_addr_reg(_X_ADDR_END_H, end_x, end_y)
+        self._write_addr_reg(_X_OUTPUT_SIZE_H, width, height)
+
+        if not self._binning:
+            self._write_addr_reg(_X_TOTAL_SIZE_H, total_x, total_y)
+            self._write_addr_reg(_X_OFFSET_H, offset_x, offset_y)
+        else:
+            if width > 920:
+                self._write_addr_reg(_X_TOTAL_SIZE_H, settings.total_x - 200, settings.total_y // 2)
+            else:
+                self._write_addr_reg(_X_TOTAL_SIZE_H, 2060, total_y // 2)
+            self._write_addr_reg(_X_OFFSET_H, offset_x // 2, offset_y // 2)
+
+        self._write_reg_bits(_ISP_CONTROL_01, 0x20, self._scale)
+
+        self._set_image_options()
+
+        if self.colorspace == OV5640_COLOR_JPEG:
+            sys_mul = 200
+            if size < OV5640_SIZE_QVGA:
+                sys_mul = 160
+            if size < OV5640_SIZE_XGA:
+                sys_mul = 180
+            self._set_pll(False, sys_mul, 4, 2, False, 2, True, 4)
+        else:
+            self._set_pll(False, 8, 1, 1, False, 1, True, 4)
+
+#    @staticmethod
+#    def _calc_sysclk(pll_bypass, pll_multiplier, pll_sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div):
+#        assert pll_sys_div
+#
+#        pll_pre_div = pll_pre_div2x_factors[pre_div]
+#        root_2x_div = root_2x ? 2 : 1
+#        pll_pclk_root_div = pll_pck_root_div_factors[pclk_root_div]
+#        refin = xclk // pll_pre_div
+#        vco = refin * pll_multiplier // root_2x_div
+#        pll_clk = xclk if pll_bypass else vcl // pll_sys_div * 2 // 5
+#        #pclk = pll_clk // pll_pck_root_div // ((pclk_div if (pclk_manual and pclk_div) else 2)
+#        sysclk = pll_clk / 4
+#        return sysclk
+
+    def _set_pll(self, bypass, multiplier, sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div):
+        if multiplier > 252 or multiplier < 4 or sys_div > 15 or pre_div > 8 or pclk_div > 31 or pclk_root_div > 3:
+            raise ValueError("Invalid argument to internal function")
+
+        
+        self._write_register(0x3039, 0x80 if bypass else 0)
+        self._write_register(0x3034, 0x1a)
+        self._write_register(0x3035, 1 | ((sys_div & 0xf) << 4))
+        self._write_register(0x3036, multiplier & 0xff)
+        self._write_register(0x3037, (pre_div & 0xf) | (0x10 if root_2x else 0))
+        self._write_register(0x3108, (pclk_root_div & 3) << 4 | 0x06)
+        self._write_register(0x3824, pclk_div & 0x1f)
+        self._write_register(0x460c, 0x22 if pclk_manual else 0x22)
+        self._write_register(0x3103, 0x13)
+
 
     @size.setter
     def size(self, size):
+        print("set size")
         self._size = size
         self._set_size_and_colorspace()
-
-    def _set_flip(self):
-        bits = 0
-        if self._flip_x:
-            bits |= _REG04_HFLIP_IMG
-        if self._flip_y:
-            bits |= _REG04_VFLIP_IMG | _REG04_VREF_EN
-        self._write_bank_register(_BANK_SENSOR, _REG04, _REG04_SET(bits))
 
     @property
     def flip_x(self):
@@ -939,7 +1033,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @flip_x.setter
     def flip_x(self, value):
         self._flip_x = bool(value)
-        self._set_flip()
+        self._set_image_options()
 
     @property
     def flip_y(self):
@@ -949,94 +1043,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @flip_y.setter
     def flip_y(self, value):
         self._flip_y = bool(value)
-        self._set_flip()
-
-    @property
-    def product_id(self):
-        """Get the product id (PID) register.  The expected value is 0x26."""
-        return self._read_bank_register(_BANK_SENSOR, _REG_PID)
-
-    @property
-    def product_version(self):
-        """Get the version (VER) register.  The expected value is 0x4x."""
-        return self._read_bank_register(_BANK_SENSOR, _REG_VER)
-
-    def _set_window(
-        self, mode, offset_x, offset_y, max_x, max_y, width, height
-    ):  # pylint: disable=too-many-arguments, too-many-locals
-        self._w = width
-        self._h = height
-
-        max_x //= 4
-        max_y //= 4
-        width //= 4
-        height //= 4
-
-        win_regs = [
-            _BANK_SEL,
-            _BANK_DSP,
-            _HSIZE,
-            max_x & 0xFF,
-            _VSIZE,
-            max_y & 0xFF,
-            _XOFFL,
-            offset_x & 0xFF,
-            _YOFFL,
-            offset_y & 0xFF,
-            _VHYX,
-            ((max_y >> 1) & 0x80)
-            | ((offset_y >> 4) & 0x70)
-            | ((max_x >> 5) & 0x08)
-            | ((offset_y >> 8) & 0x07),
-            _TEST,
-            (max_x >> 2) & 0x80,
-            _ZMOW,
-            (width) & 0xFF,
-            _ZMOH,
-            (height) & 0xFF,
-            _ZMHH,
-            ((height >> 6) & 0x04) | ((width >> 8) & 0x03),
-        ]
-
-        pclk_auto = 0
-        pclk_div = 8
-        clk_2x = 0
-        clk_div = 0
-
-        if self._colorspace != OV5640_COLOR_JPEG:
-            pclk_auto = 1
-            clk_div = 7
-
-        if mode == _OV5640_MODE_CIF:
-            regs = _ov5640_settings_to_cif
-            if self._colorspace != OV5640_COLOR_JPEG:
-                clk_div = 3
-        elif mode == _OV5640_MODE_SVGA:
-            regs = _ov5640_settings_to_svga
-        else:
-            regs = _ov5640_settings_to_uxga
-            pclk_div = 12
-
-        clk = clk_div | (clk_2x << 7)
-        pclk = pclk_div | (pclk_auto << 7)
-
-        self._write_bank_register(_BANK_DSP, _R_BYPASS, _R_BYPASS_DSP_BYPAS)
-        self._write_list(regs)
-        self._write_list(win_regs)
-        self._write_bank_register(_BANK_SENSOR, _CLKRC, clk)
-
-        self._write_list(win_regs)
-        self._write_bank_register(_BANK_SENSOR, _CLKRC, clk)
-        self._write_bank_register(_BANK_DSP, _R_DVP_SP, pclk)
-        self._write_register(_R_BYPASS, _R_BYPASS_DSP_EN)
-        time.sleep(0.01)
-
-        # Reestablish colorspace
-        self._set_colorspace()
-
-        # Reestablish test pattern
-        if self._test_pattern:
-            self.test_pattern = self._test_pattern
+        self._set_image_options()
 
     @property
     def exposure(self):
