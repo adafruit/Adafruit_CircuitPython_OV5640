@@ -714,6 +714,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         b[0] = reg >> 8
         b[1] = reg & 0xff
         b[2] = value
+        print(f"0x{reg:04x}, 0x{value:02x},")
         with self._i2c_device as i2c:
             i2c.write(b)
 
@@ -749,12 +750,13 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
                 self._write_register(register, value)
 
     def _write_reg_bits(self, reg, mask, enable):
-        val = self._read_register(reg)
+        oldval = val = self._read_register(reg)
         if enable:
             val |= mask
         else:
             val &= ~mask
-
+        print(f"_write_reg_bits reg={reg:04x} oldval={oldval:02x} mask={mask:02x} enable={enable:02x} -> {val:02x}")
+        self._write_register(reg, val)
 
 class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def __init__(
@@ -929,13 +931,13 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._write_register(0x4514, reg4514)
 
         if self._binning:
-            self._write_register(0x4520, 0x10)
-            self._write_register(_X_INCREMENT, 0x11)
-            self._write_register(_Y_INCREMENT, 0x11)
-        else:
             self._write_register(0x4520, 0x0b)
             self._write_register(_X_INCREMENT, 0x31)
             self._write_register(_Y_INCREMENT, 0x31)
+        else:
+            self._write_register(0x4520, 0x10)
+            self._write_register(_X_INCREMENT, 0x11)
+            self._write_register(_Y_INCREMENT, 0x11)
 
     def _set_colorspace(self):
         colorspace = self._colorspace
@@ -967,6 +969,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._h = height
         max_width, max_height, start_x, start_y, end_x, end_y, offset_x, offset_y, total_x, total_y = _ratio_table[ratio]
 
+        print("resolution info", _resolution_info[size])
+        print("ratio table", _ratio_table[ratio])
         self._binning = (width <= max_width//2) and (height <= max_height//2);
         self._scale = not ((width == max_width and height == max_h) or (width == max_width//2 and height == max_height//2))
 
@@ -986,6 +990,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._write_reg_bits(_ISP_CONTROL_01, 0x20, self._scale)
 
+        print("binning", self._binning)
+        print("scale", self._scale)
         self._set_image_options()
 
         if self.colorspace == OV5640_COLOR_JPEG:
