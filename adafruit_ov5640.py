@@ -531,7 +531,7 @@ _sensor_default_regs = [
     _REG_DLY, 300,
 ]
 
-_sensor_fmt_jpeg = [
+_sensor_format_jpeg = [
     _FORMAT_CTRL, 0x00,  # YUV422
     _FORMAT_CTRL00, 0x30,  # YUYV
     0x3002, 0x00,  # 0x1c to 0x00 !!!
@@ -539,12 +539,12 @@ _sensor_fmt_jpeg = [
     0x471C, 0x50,  # 0xd0 to 0x50 !!!
 ]
 
-_sensor_fmt_raw = [
+_sensor_format_raw = [
     _FORMAT_CTRL, 0x03,  # RAW (DPC)
     _FORMAT_CTRL00, 0x00,  # RAW
 ]
 
-_sensor_fmt_grayscale = [
+_sensor_format_grayscale = [
     _FORMAT_CTRL, 0x00,  # YUV422
     _FORMAT_CTRL00, 0x10,  # Y8
 ]
@@ -558,6 +558,13 @@ _sensor_format_rgb565 = [
     _FORMAT_CTRL, 0x01,  # RGB
     _FORMAT_CTRL00, 0x61,  # RGB565 (BGR)
 ]
+
+_ov5640_color_settings = {
+    OV5640_COLOR_RGB: _sensor_format_rgb565,
+    OV5640_COLOR_YUV: _sensor_format_yuv422,
+    OV5640_COLOR_GRAYSCALE: _sensor_format_grayscale,
+    OV5640_COLOR_JPEG: _sensor_format_jpeg,
+}
 
 _sensor_saturation_levels = [
     [0x1D, 0x60, 0x03, 0x07, 0x48, 0x4F, 0x4B, 0x40, 0x0B, 0x01, 0x98],  # -4
@@ -706,7 +713,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         b = bytearray(3)
         b[0] = reg >> 8
         b[1] = reg & 0xff
-        b[1] = value
+        b[2] = value
         with self._i2c_device as i2c:
             i2c.write(b)
 
@@ -956,6 +963,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         print("set size and colorspace")
         size = self._size
         width, height, ratio = _resolution_info[size]
+        self._w = width
+        self._h = height
         max_width, max_height, start_x, start_y, end_x, end_y, offset_x, offset_y, total_x, total_y = _ratio_table[ratio]
 
         self._binning = (width <= max_width//2) and (height <= max_height//2);
@@ -988,6 +997,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._set_pll(False, sys_mul, 4, 2, False, 2, True, 4)
         else:
             self._set_pll(False, 8, 1, 1, False, 1, True, 4)
+
+        self._set_colorspace()
 
 #    @staticmethod
 #    def _calc_sysclk(pll_bypass, pll_multiplier, pll_sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div):
