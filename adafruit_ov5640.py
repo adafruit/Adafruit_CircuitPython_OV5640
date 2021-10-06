@@ -714,7 +714,6 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         b[0] = reg >> 8
         b[1] = reg & 0xff
         b[2] = value
-        print(f"0x{reg:04x}, 0x{value:02x},")
         with self._i2c_device as i2c:
             i2c.write(b)
 
@@ -869,14 +868,12 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def width(self):
-        """Get the image width in pixels.  A buffer of 2*width*height bytes \
-        stores a whole image."""
+        """Get the image width in pixels."""
         return self._w
 
     @property
     def height(self):
-        """Get the image height in pixels.  A buffer of 2*width*height bytes \
-        stores a whole image."""
+        """Get the image height in pixels."""
         return self._h
 
     @property
@@ -1063,21 +1060,10 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._set_image_options()
 
     @property
-    def exposure(self):
-        """The exposure level of the sensor"""
-        aec_9_2 = self._get_reg_bits(_BANK_SENSOR, _AEC, 0, 0xFF)
-        aec_15_10 = self._get_reg_bits(_BANK_SENSOR, _REG45, 0, 0b111111)
-        aec_1_0 = self._get_reg_bits(_BANK_SENSOR, _REG04, 0, 0b11)
+    def test_pattern(self):
+        return self._test_pattern
 
-        return aec_1_0 | (aec_9_2 << 2) | (aec_15_10 << 10)
-
-    @exposure.setter
-    def exposure(self, exposure):
-        aec_1_0 = exposure & 0x11
-        aec_9_2 = (exposure >> 2) & 0b11111111
-        aec_15_10 = exposure >> 10
-
-        self._set_reg_bits(_BANK_SENSOR, _AEC, 0, 0xFF, aec_9_2)
-        self._set_reg_bits(_BANK_SENSOR, _REG45, 0, 0b111111, aec_15_10)
-        self._set_reg_bits(_BANK_SENSOR, _REG04, 0, 0b11, aec_1_0)
-
+    @test_pattern.setter
+    def test_pattern(self, value: bool) -> None:
+        self._test_pattern = value
+        self._write_register(_PRE_ISP_TEST_SETTING_1, value << 7)
