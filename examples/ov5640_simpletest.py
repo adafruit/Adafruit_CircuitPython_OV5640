@@ -28,7 +28,9 @@ import board
 
 import adafruit_ov5640
 
+print('construct bus')
 bus = busio.I2C(scl=board.CAMERA_SIOC, sda=board.CAMERA_SIOD)
+print('construct camera')
 cam = adafruit_ov5640.OV5640(
     bus,
     data_pins=board.CAMERA_DATA,
@@ -36,27 +38,36 @@ cam = adafruit_ov5640.OV5640(
     vsync=board.CAMERA_VSYNC,
     href=board.CAMERA_HREF,
     mclk=board.CAMERA_XCLK,
-    mclk_frequency=20_000_000,
+    mclk_frequency=24_000_000,
     size=adafruit_ov5640.OV5640_SIZE_QQVGA,
 )
+print('print chip id')
+print(cam.chip_id)
+
+
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_YUV
 cam.flip_y = True
-# cam.test_pattern = True
+cam.flip_x = True
+cam.test_pattern = False
 
-buf = bytearray(2 * cam.width * cam.height)
-chars = b" .:-=+*#%@"
+buf = bytearray(cam.capture_buffer_size)
+chars = b" .':-+=*%$#"
 remap = [chars[i * (len(chars) - 1) // 255] for i in range(256)]
 
 width = cam.width
-row = bytearray(2 * width)
+row = bytearray(width)
+
+print("capturing")
+cam.capture(buf)
+print("capture complete")
 
 sys.stdout.write("\033[2J")
 while True:
     cam.capture(buf)
-    for j in range(cam.height // 2):
-        sys.stdout.write(f"\033[{j}H")
-        for i in range(cam.width // 2):
-            row[i * 2] = row[i * 2 + 1] = remap[buf[4 * (width * j + i)]]
+    for j in range(0, cam.height, 2):
+        sys.stdout.write(f"\033[{j//2}H")
+        for i in range(cam.width):
+            row[i] = remap[buf[2 * (width * j + i)]]
         sys.stdout.write(row)
         sys.stdout.write("\033[K")
     sys.stdout.write("\033[J")
