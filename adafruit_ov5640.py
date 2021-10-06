@@ -321,6 +321,10 @@ OV5640_SIZE_XGA = 10  # 1024x768
 OV5640_SIZE_HD = 11  # 1280x720
 OV5640_SIZE_SXGA = 12  # 1280x1024
 OV5640_SIZE_UXGA = 13  # 1600x1200
+OV5640_SIZE_QHDA = 14  # 2560x1440
+OV5640_SIZE_WQXGA = 15  # 2560x1600
+OV5640_SIZE_PFHD = 16  # 1088x1920
+OV5640_SIZE_QSXGA = 17  # 2560x1920
 
 _ASPECT_RATIO_4X3 = const(0)
 _ASPECT_RATIO_3X2 = const(1)
@@ -979,7 +983,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         print("resolution info", _resolution_info[size])
         print("ratio table", _ratio_table[ratio])
         self._binning = (width <= max_width//2) and (height <= max_height//2);
-        self._scale = not ((width == max_width and height == max_h) or (width == max_width//2 and height == max_height//2))
+        self._scale = not ((width == max_width and height == max_height) or (width == max_width//2 and height == max_height//2))
 
         self._write_addr_reg(_X_ADDR_ST_H, start_x, start_y)
         self._write_addr_reg(_X_ADDR_END_H, end_x, end_y)
