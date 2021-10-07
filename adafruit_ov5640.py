@@ -974,7 +974,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         return self._size
 
     def _set_size_and_colorspace(self):  # pylint: disable=too-many-locals
-        print("set size and colorspace")
         size = self._size
         width, height, ratio = _resolution_info[size]
         self._w = width
@@ -992,8 +991,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             total_y,
         ) = _ratio_table[ratio]
 
-        print("resolution info", _resolution_info[size])
-        print("ratio table", _ratio_table[ratio])
         self._binning = (width <= max_width // 2) and (height <= max_height // 2)
         self._scale = not (
             (width == max_width and height == max_height)
@@ -1016,8 +1013,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._write_reg_bits(_ISP_CONTROL_01, 0x20, self._scale)
 
-        print("binning", self._binning)
-        print("scale", self._scale)
         self._set_image_options()
 
         if self.colorspace == OV5640_COLOR_JPEG:
@@ -1065,7 +1060,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @size.setter
     def size(self, size):
-        print("set size")
         self._size = size
         self._set_size_and_colorspace()
 
