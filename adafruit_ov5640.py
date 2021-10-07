@@ -1126,3 +1126,11 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         ):
             self._write_register(reg_addr, reg_value)
         self._effect = value
+
+    @property
+    def quality(self):
+        return self._read_register(_COMPRESSION_CTRL07) & 0x3F
+
+    @quality.setter
+    def quality(self, value):
+        self._write_register(_COMPRESSION_CTRL07, value & 0x3F)
