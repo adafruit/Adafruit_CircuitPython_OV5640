@@ -89,12 +89,14 @@ bitmap = displayio.Bitmap(cam.width, cam.height, 65536)
 
 display.auto_refresh = False
 
+
 def main():
     display.auto_refresh = False
-    display_bus.send(42, struct.pack(">hh", 0, bitmap.width-1))
-    display_bus.send(43, struct.pack(">hh", 0, bitmap.height-1))
+    display_bus.send(42, struct.pack(">hh", 0, bitmap.width - 1))
+    display_bus.send(43, struct.pack(">hh", 0, bitmap.height - 1))
     while True:
         cam.capture(bitmap)
         display_bus.send(44, bitmap)
+
 
 main()

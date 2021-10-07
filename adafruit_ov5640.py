@@ -37,6 +37,7 @@ Implementation Notes
 import time
 import imagecapture
 import pwmio
+import digitalio
 from adafruit_bus_device.i2c_device import I2CDevice
 
 __version__ = "0.0.0-auto.0"
@@ -753,9 +754,9 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         return b[0]
 
     def _read_register16(self, reg):
-        hi = self._read_register(reg)
-        lo = self._read_register(reg + 1)
-        return (hi << 8) | lo
+        high = self._read_register(reg)
+        low = self._read_register(reg + 1)
+        return (high << 8) | low
 
     def _write_list(self, reg_list):
         for i in range(0, len(reg_list), 2):
@@ -767,7 +768,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
                 self._write_register(register, value)
 
     def _write_reg_bits(self, reg, mask, enable):
-        oldval = val = self._read_register(reg)
+        val = val = self._read_register(reg)
         if enable:
             val |= mask
         else:
@@ -776,6 +777,8 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
 
 
 class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
+    """Control & Capture Images from an OV5640 Camera"""
+
     def __init__(
         self,
         i2c_bus,
@@ -852,6 +855,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._size = None
         self._test_pattern = False
         self._binning = False
+        self._scale = False
         self.size = size
 
     chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xFFFF)
@@ -905,7 +909,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._colorspace = colorspace
         self._set_size_and_colorspace()
 
-    def _set_image_options(self):
+    def _set_image_options(self):  # pylint: disable=too-many-branches
         reg20 = reg21 = reg4514 = reg4514_test = 0
         if self.colorspace == OV5640_COLOR_JPEG:
             reg21 |= 0x20
@@ -976,7 +980,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         """Get or set the captured image size, one of the ``OV5640_SIZE_`` constants."""
         return self._size
 
-    def _set_size_and_colorspace(self):
+    def _set_size_and_colorspace(self):  # pylint: disable=too-many-locals
         print("set size and colorspace")
         size = self._size
         width, height, ratio = _resolution_info[size]
@@ -1012,9 +1016,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._write_addr_reg(_X_OFFSET_H, offset_x, offset_y)
         else:
             if width > 920:
-                self._write_addr_reg(
-                    _X_TOTAL_SIZE_H, settings.total_x - 200, settings.total_y // 2
-                )
+                self._write_addr_reg(_X_TOTAL_SIZE_H, total_x - 200, total_y // 2)
             else:
                 self._write_addr_reg(_X_TOTAL_SIZE_H, 2060, total_y // 2)
             self._write_addr_reg(_X_OFFSET_H, offset_x // 2, offset_y // 2)
@@ -1037,7 +1039,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._set_colorspace()
 
-    def _set_pll(
+    def _set_pll(  # pylint: disable=too-many-arguments
         self,
         bypass,
         multiplier,
@@ -1048,7 +1050,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         pclk_manual,
         pclk_div,
     ):
-        if (
+        if (  # pylint: disable=too-many-boolean-expressions
             multiplier > 252
             or multiplier < 4
             or sys_div > 15
@@ -1096,6 +1098,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def test_pattern(self):
+        """Set to True to enable a test pattern, False to enable normal image capture"""
         return self._test_pattern
 
     @test_pattern.setter
@@ -1129,8 +1132,11 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def quality(self):
+        """Controls the JPEG quality.  Valid range is from 2..55 inclusive"""
         return self._read_register(_COMPRESSION_CTRL07) & 0x3F
 
     @quality.setter
-    def quality(self, value):
+    def quality(self, value: int):
+        if not 2 <= value < 55:
+            raise ValueError("Invalid quality value, use a value from 2..55 inclusive")
         self._write_register(_COMPRESSION_CTRL07, value & 0x3F)

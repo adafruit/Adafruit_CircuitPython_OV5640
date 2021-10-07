@@ -28,9 +28,9 @@ import board
 
 import adafruit_ov5640
 
-print('construct bus')
+print("construct bus")
 bus = busio.I2C(scl=board.CAMERA_SIOC, sda=board.CAMERA_SIOD)
-print('construct camera')
+print("construct camera")
 cam = adafruit_ov5640.OV5640(
     bus,
     data_pins=board.CAMERA_DATA,
@@ -41,7 +41,7 @@ cam = adafruit_ov5640.OV5640(
     mclk_frequency=24_000_000,
     size=adafruit_ov5640.OV5640_SIZE_QQVGA,
 )
-print('print chip id')
+print("print chip id")
 print(cam.chip_id)
 
 

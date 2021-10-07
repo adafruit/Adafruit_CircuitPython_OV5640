@@ -67,6 +67,7 @@ def exists(filename):
 
 _image_counter = 0
 
+
 def open_next_image():
     global _image_counter
     while True:
@@ -77,26 +78,34 @@ def open_next_image():
         print("# writing to", filename)
         return open(filename, "wb")
 
+
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_JPEG
 cam.quality = 7
 b = bytearray(cam.capture_buffer_size)
 
 print("Press 'record' button to take a JPEG image")
 while True:
-    pixel[0] = 0x0000ff; pixel.write()
+    pixel[0] = 0x0000FF
+    pixel.write()
     a_voltage = a.value * a.reference_voltage / 65535
     record_pressed = abs(a_voltage - V_RECORD) < 0.05
     if record_pressed:
-        pixel[0] = 0xff0000; pixel.write(); time.sleep(.01)
+        pixel[0] = 0xFF0000
+        pixel.write()
+        time.sleep(0.01)
         jpeg = cam.capture(b)
-        print(f"Captured {len(jpeg)} bytes of jpeg data (had allocated {cam.capture_buffer_size} bytes")
+        print(
+            f"Captured {len(jpeg)} bytes of jpeg data (had allocated {cam.capture_buffer_size} bytes"
+        )
         print(f"Resolution {cam.width}x{cam.height}")
         try:
-            pixel[0] = 0x00ff00; pixel.write()
+            pixel[0] = 0x00FF00
+            pixel.write()
             with open_next_image() as f:
                 f.write(jpeg)
             print("# Wrote image")
-            pixel[0] = 0x000000; pixel.write()
+            pixel[0] = 0x000000
+            pixel.write()
         except OSError as e:
             print(e)
         while record_pressed:
