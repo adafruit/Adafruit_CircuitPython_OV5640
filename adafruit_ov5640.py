@@ -16,19 +16,12 @@ Implementation Notes
 
 **Hardware:**
 
-.. todo:: Add links to any specific hardware product page(s), or category page(s).
-  Use unordered list & hyperlink rST inline format: "* `Link Text <url>`_"
+* ESP32-S2 Kaluga Dev Kit featuring ESP32-S2 WROVER <https://www.adafruit.com/product/4729>
 
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
-
-.. todo:: Uncomment or remove the Bus Device and/or the Register library dependencies
-  based on the library's use of either.
-
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
 # pylint: disable=too-many-lines
@@ -879,7 +872,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def capture_buffer_size(self):
         """Return the size of capture buffer to use with current resolution & colorspace settings"""
         if self.colorspace == OV5640_COLOR_JPEG:
-            return self.width * self.height // 5
+            return self.width * self.height // self.quality
         if self.colorspace == OV5640_COLOR_GRAYSCALE:
             return self.width * self.height
         return self.width * self.height * 2
@@ -1132,11 +1125,13 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def quality(self):
-        """Controls the JPEG quality.  Valid range is from 2..55 inclusive"""
+        """Controls the JPEG quality.  Valid range is from 5..55 inclusive"""
         return self._read_register(_COMPRESSION_CTRL07) & 0x3F
 
     @quality.setter
     def quality(self, value: int):
-        if not 2 <= value < 55:
-            raise ValueError("Invalid quality value, use a value from 2..55 inclusive")
+        if not 5 <= value < 55:
+            raise ValueError(
+                f"Invalid quality value {value}, use a value from 5..55 inclusive"
+            )
         self._write_register(_COMPRESSION_CTRL07, value & 0x3F)
