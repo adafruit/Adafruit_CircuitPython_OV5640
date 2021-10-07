@@ -25,12 +25,13 @@ extensions = [
 # digitalio, micropython and busio. List the modules you use. Without it, the
 # autodoc module docs will fail to generate with a warning.
 autodoc_mock_imports = [
-    "digitalio",
+    "adafruit_bus_device",
+    "analogio",
     "busio",
+    "digitalio",
+    "imagecapture",
     "sdcardio",
     "storage",
-    "analogio",
-    "imagecapture",
 ]
 
 

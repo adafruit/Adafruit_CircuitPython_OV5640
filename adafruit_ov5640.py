@@ -1112,7 +1112,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def effect(self):
-        """Get or set the special effect, one of the OV5640_SPECIAL_EFFECT_ constants"""
+        """Get or set the special effect, one of the ``OV5640_SPECIAL_EFFECT_`` constants"""
         return self._effect
 
     @effect.setter
