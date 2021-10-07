@@ -31,6 +31,8 @@ Implementation Notes
 # * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
+# pylint: disable=too-many-lines
+
 # imports
 import time
 import imagecapture
@@ -177,13 +179,15 @@ _PCLK_RATIO = const(0x3824)
 _FRAME_CTRL01 = const(
     0x4201
 )
-# Control Passed Frame Number When both ON and OFF number set to 0x00,frame control is in bypass mode
+# Control Passed Frame Number When both ON and OFF number set to 0x00,frame
+# control is in bypass mode
 # Bit[7:4]: Not used
 # Bit[3:0]: Frame ON number
 _FRAME_CTRL02 = const(
     0x4202
 )
-# Control Masked Frame Number When both ON and OFF number set to 0x00,frame control is in bypass mode
+# Control Masked Frame Number When both ON and OFF number set to 0x00,frame
+# control is in bypass mode
 # Bit[7:4]: Not used
 # BIT[3:0]: Frame OFF number
 
@@ -351,10 +355,10 @@ _resolution_info = [
     [1280, 720, _ASPECT_RATIO_16X9],  # HD
     [1280, 1024, _ASPECT_RATIO_5X4],  # SXGA
     [1600, 1200, _ASPECT_RATIO_4X3],  # UXGA
-    [2560, 1440, _ASPECT_RATIO_16X9], # QHD 
+    [2560, 1440, _ASPECT_RATIO_16X9], # QHD
     [2560, 1600, _ASPECT_RATIO_16X10], # WQXGA
-    [1088, 1920, _ASPECT_RATIO_9X16], # Portrait FHD  
-    [2560, 1920, _ASPECT_RATIO_4X3], # QSXGA 
+    [1088, 1920, _ASPECT_RATIO_9X16], # Portrait FHD
+    [2560, 1920, _ASPECT_RATIO_4X3], # QSXGA
 
 ]
 
@@ -675,6 +679,7 @@ sensor_regs_awb0 = [
 ]
 # fmt: on
 
+
 class _RegBits:
     def __init__(self, reg, shift, mask):
         self.reg = reg
@@ -694,6 +699,7 @@ class _RegBits:
         reg_value &= ~(self.mask << self.shift)
         reg_value |= value << self.shift
         obj._write_register(self.reg, reg_value)
+
 
 class _RegBits16:
     def __init__(self, reg, shift, mask):
@@ -724,23 +730,23 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
     def _write_register(self, reg, value):
         b = bytearray(3)
         b[0] = reg >> 8
-        b[1] = reg & 0xff
+        b[1] = reg & 0xFF
         b[2] = value
         with self._i2c_device as i2c:
             i2c.write(b)
 
     def _write_addr_reg(self, reg, x_value, y_value):
         self._write_register16(reg, x_value)
-        self._write_register16(reg+2, y_value)
+        self._write_register16(reg + 2, y_value)
 
     def _write_register16(self, reg, value):
         self._write_register(reg, value >> 8)
-        self._write_register(reg+1, value & 0xff)
+        self._write_register(reg + 1, value & 0xFF)
 
     def _read_register(self, reg):
         b = bytearray(2)
         b[0] = reg >> 8
-        b[1] = reg & 0xff
+        b[1] = reg & 0xFF
         with self._i2c_device as i2c:
             i2c.write(b)
             i2c.readinto(b, end=1)
@@ -748,13 +754,13 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
 
     def _read_register16(self, reg):
         hi = self._read_register(reg)
-        lo = self._read_register(reg+1)
+        lo = self._read_register(reg + 1)
         return (hi << 8) | lo
 
     def _write_list(self, reg_list):
         for i in range(0, len(reg_list), 2):
             register = reg_list[i]
-            value = reg_list[i+1]
+            value = reg_list[i + 1]
             if register == _REG_DLY:
                 time.sleep(value / 1000)
             else:
@@ -766,8 +772,8 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
             val |= mask
         else:
             val &= ~mask
-        print(f"_write_reg_bits reg={reg:04x} oldval={oldval:02x} mask={mask:02x} enable={enable:02x} -> {val:02x}")
         self._write_register(reg, val)
+
 
 class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def __init__(
@@ -781,7 +787,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         reset=None,
         mclk=None,
         mclk_frequency=24_000_000,
-        i2c_address=0x3c,
+        i2c_address=0x3C,
         size=OV5640_SIZE_QQVGA,
     ):  # pylint: disable=too-many-arguments
         """
@@ -848,7 +854,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._binning = False
         self.size = size
 
-    chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xffff)
+    chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xFFFF)
 
     def capture(self, buf):
         """Capture an image into the buffer.
@@ -864,7 +870,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 # terminate the JPEG data just after the EOI marker
                 return memoryview(buf)[: eoi + 2]
         return None
-
 
     @property
     def capture_buffer_size(self):
@@ -925,24 +930,24 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         elif reg4514_test == 1:
             reg4514 = 0x00
         elif reg4514_test == 2:
-            reg4514 = 0xbb
+            reg4514 = 0xBB
         elif reg4514_test == 3:
             reg4514 = 0x00
         elif reg4514_test == 4:
-            reg4514 = 0xaa
+            reg4514 = 0xAA
         elif reg4514_test == 5:
-            reg4514 = 0xbb
+            reg4514 = 0xBB
         elif reg4514_test == 6:
-            reg4514 = 0xbb
+            reg4514 = 0xBB
         elif reg4514_test == 7:
-            reg4514 = 0xaa
+            reg4514 = 0xAA
 
         self._write_register(_TIMING_TC_REG20, reg20)
         self._write_register(_TIMING_TC_REG21, reg21)
         self._write_register(0x4514, reg4514)
 
         if self._binning:
-            self._write_register(0x4520, 0x0b)
+            self._write_register(0x4520, 0x0B)
             self._write_register(_X_INCREMENT, 0x31)
             self._write_register(_Y_INCREMENT, 0x31)
         else:
@@ -966,7 +971,6 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         if self._reset:
             self._reset.deinit()
 
-
     @property
     def size(self):
         """Get or set the captured image size, one of the ``OV5640_SIZE_`` constants."""
@@ -978,12 +982,26 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         width, height, ratio = _resolution_info[size]
         self._w = width
         self._h = height
-        max_width, max_height, start_x, start_y, end_x, end_y, offset_x, offset_y, total_x, total_y = _ratio_table[ratio]
+        (
+            max_width,
+            max_height,
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            offset_x,
+            offset_y,
+            total_x,
+            total_y,
+        ) = _ratio_table[ratio]
 
         print("resolution info", _resolution_info[size])
         print("ratio table", _ratio_table[ratio])
-        self._binning = (width <= max_width//2) and (height <= max_height//2);
-        self._scale = not ((width == max_width and height == max_height) or (width == max_width//2 and height == max_height//2))
+        self._binning = (width <= max_width // 2) and (height <= max_height // 2)
+        self._scale = not (
+            (width == max_width and height == max_height)
+            or (width == max_width // 2 and height == max_height // 2)
+        )
 
         self._write_addr_reg(_X_ADDR_ST_H, start_x, start_y)
         self._write_addr_reg(_X_ADDR_END_H, end_x, end_y)
@@ -994,7 +1012,9 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._write_addr_reg(_X_OFFSET_H, offset_x, offset_y)
         else:
             if width > 920:
-                self._write_addr_reg(_X_TOTAL_SIZE_H, settings.total_x - 200, settings.total_y // 2)
+                self._write_addr_reg(
+                    _X_TOTAL_SIZE_H, settings.total_x - 200, settings.total_y // 2
+                )
             else:
                 self._write_addr_reg(_X_TOTAL_SIZE_H, 2060, total_y // 2)
             self._write_addr_reg(_X_OFFSET_H, offset_x // 2, offset_y // 2)
@@ -1017,35 +1037,36 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._set_colorspace()
 
-#    @staticmethod
-#    def _calc_sysclk(pll_bypass, pll_multiplier, pll_sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div):
-#        assert pll_sys_div
-#
-#        pll_pre_div = pll_pre_div2x_factors[pre_div]
-#        root_2x_div = root_2x ? 2 : 1
-#        pll_pclk_root_div = pll_pck_root_div_factors[pclk_root_div]
-#        refin = xclk // pll_pre_div
-#        vco = refin * pll_multiplier // root_2x_div
-#        pll_clk = xclk if pll_bypass else vcl // pll_sys_div * 2 // 5
-#        #pclk = pll_clk // pll_pck_root_div // ((pclk_div if (pclk_manual and pclk_div) else 2)
-#        sysclk = pll_clk / 4
-#        return sysclk
-
-    def _set_pll(self, bypass, multiplier, sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div):
-        if multiplier > 252 or multiplier < 4 or sys_div > 15 or pre_div > 8 or pclk_div > 31 or pclk_root_div > 3:
+    def _set_pll(
+        self,
+        bypass,
+        multiplier,
+        sys_div,
+        pre_div,
+        root_2x,
+        pclk_root_div,
+        pclk_manual,
+        pclk_div,
+    ):
+        if (
+            multiplier > 252
+            or multiplier < 4
+            or sys_div > 15
+            or pre_div > 8
+            or pclk_div > 31
+            or pclk_root_div > 3
+        ):
             raise ValueError("Invalid argument to internal function")
 
-        
         self._write_register(0x3039, 0x80 if bypass else 0)
-        self._write_register(0x3034, 0x1a)
-        self._write_register(0x3035, 1 | ((sys_div & 0xf) << 4))
-        self._write_register(0x3036, multiplier & 0xff)
-        self._write_register(0x3037, (pre_div & 0xf) | (0x10 if root_2x else 0))
+        self._write_register(0x3034, 0x1A)
+        self._write_register(0x3035, 1 | ((sys_div & 0xF) << 4))
+        self._write_register(0x3036, multiplier & 0xFF)
+        self._write_register(0x3037, (pre_div & 0xF) | (0x10 if root_2x else 0))
         self._write_register(0x3108, (pclk_root_div & 3) << 4 | 0x06)
-        self._write_register(0x3824, pclk_div & 0x1f)
-        self._write_register(0x460c, 0x22 if pclk_manual else 0x22)
+        self._write_register(0x3824, pclk_div & 0x1F)
+        self._write_register(0x460C, 0x22 if pclk_manual else 0x22)
         self._write_register(0x3103, 0x13)
-
 
     @size.setter
     def size(self, size):
@@ -1100,7 +1121,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @effect.setter
     def effect(self, value):
-        for reg_addr, reg_value in zip((0x5580, 0x5583, 0x5584, 0x5003), _sensor_special_effects[value]):
+        for reg_addr, reg_value in zip(
+            (0x5580, 0x5583, 0x5584, 0x5003), _sensor_special_effects[value]
+        ):
             self._write_register(reg_addr, reg_value)
         self._effect = value
-
