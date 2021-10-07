@@ -286,10 +286,10 @@ _COMPRESSION_CTRL07 = const(0x4407)
 # Bit[5:0]: QS
 _COMPRESSION_ISI_CTRL = const(0x4408)
 _COMPRESSION_CTRL09 = const(0x4409)
-_COMPRESSION_CTRL0a = const(0x440A)
-_COMPRESSION_CTRL0b = const(0x440B)
-_COMPRESSION_CTRL0c = const(0x440C)
-_COMPRESSION_CTRL0d = const(0x440D)
+_COMPRESSION_CTRL0A = const(0x440A)
+_COMPRESSION_CTRL0B = const(0x440B)
+_COMPRESSION_CTRL0C = const(0x440C)
+_COMPRESSION_CTRL0D = const(0x440D)
 _COMPRESSION_CTRL0E = const(0x440E)
 
 _TEST_COLOR_BAR = const(0xC0)
@@ -568,6 +568,16 @@ _ov5640_color_settings = {
     OV5640_COLOR_JPEG: _sensor_format_jpeg,
 }
 
+_contrast_settings = [
+    [0x20, 0x00], #  0
+    [0x24, 0x10], # +1
+    [0x1a, 0x13], # +2
+    [0x2c, 0x1c], # +3
+    [0x14, 0x14], # -3
+    [0x18, 0x18], # -2
+    [0x1c, 0x1c], # -1
+]
+
 _sensor_saturation_levels = [
     [0x1D, 0x60, 0x03, 0x0C, 0x78, 0x84, 0x7D, 0x6B, 0x12, 0x01, 0x98],  # 0
     [0x1D, 0x60, 0x03, 0x0D, 0x84, 0x91, 0x8A, 0x76, 0x14, 0x01, 0x98],  # +1
@@ -578,6 +588,32 @@ _sensor_saturation_levels = [
     [0x1D, 0x60, 0x03, 0x08, 0x54, 0x5C, 0x58, 0x4B, 0x0D, 0x01, 0x98],  # -3
     [0x1D, 0x60, 0x03, 0x0A, 0x60, 0x6A, 0x64, 0x56, 0x0E, 0x01, 0x98],  # -2
     [0x1D, 0x60, 0x03, 0x0B, 0x6C, 0x77, 0x70, 0x60, 0x10, 0x01, 0x98],  # -1
+]
+
+_sensor_ev_levels = [
+    [0x38, 0x30, 0x61, 0x38, 0x30, 0x10], #  0
+    [0x40, 0x38, 0x71, 0x40, 0x38, 0x10], # +1
+    [0x50, 0x48, 0x90, 0x50, 0x48, 0x20], # +2
+    [0x60, 0x58, 0xa0, 0x60, 0x58, 0x20], # +3
+    [0x10, 0x08, 0x10, 0x08, 0x20, 0x10], # -3
+    [0x20, 0x18, 0x41, 0x20, 0x18, 0x10], # -2
+    [0x30, 0x28, 0x61, 0x30, 0x28, 0x10], # -1
+]
+
+OV5640_WHITE_BALANCE_AUTO = 0
+OV5640_WHITE_BALANCE_SUNNY = 1
+OV5640_WHITE_BALANCE_FLUORESCENT = 2
+OV5640_WHITE_BALANCE_CLOUDY = 3
+OV5640_WHITE_BALANCE_INCANDESCENT = 4
+
+_light_registers = [0x3406, 0x3400, 0x3401, 0x3402, 0x3403, 0x3404, 0x3405]
+_light_modes = [
+    [0x00, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00], # auto
+    [0x01, 0x06, 0x1c, 0x04, 0x00, 0x04, 0xf3], # sunny
+    [0x01, 0x05, 0x48, 0x04, 0x00, 0x07, 0xcf], # office / fluorescent
+    [0x01, 0x06, 0x48, 0x04, 0x00, 0x04, 0xd3], # cloudy
+    [0x01, 0x04, 0x10, 0x04, 0x00, 0x08, 0x40], # home / incandescent
+
 ]
 
 OV5640_SPECIAL_EFFECT_NONE = 0
@@ -849,6 +885,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._test_pattern = False
         self._binning = False
         self._scale = False
+        self._ev = 0
+        self._white_balance = 0
         self.size = size
 
     chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xFFFF)
@@ -1100,6 +1138,10 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @saturation.setter
     def saturation(self, value):
+        if not -4 <= value <= 4:
+            raise ValueError(
+                "Invalid saturation {value}, use a value from -4..4 inclusive"
+            )
         for offset, reg_value in enumerate(_sensor_saturation_levels[value]):
             self._write_register(0x5381 + offset, reg_value)
         self._saturation = value
@@ -1129,3 +1171,87 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 f"Invalid quality value {value}, use a value from 5..55 inclusive"
             )
         self._write_register(_COMPRESSION_CTRL07, value & 0x3F)
+
+    def _write_group_3_settings(self, settings):
+        self._write_register(0x3212, 0x3)  # start group 3
+        self._write_list(settings)
+        self._write_register(0x3212, 0x13)  # end group 3
+        self._write_register(0x3212, 0xA3)  # launch group 3
+
+    @property
+    def brightness(self):
+        """Sensor brightness adjustment, from -4 to 4 inclusive"""
+        brightness_abs = self._read_register(0x5587) >> 4
+        brightness_neg = self._read_register(0x5588) & 8
+        if brightness_neg:
+            return -brightness_abs
+        return brightness_abs
+
+    @brightness.setter
+    def brightness(self, value):
+        if not -4 <= value <= 4:
+            raise ValueError(
+                "Invalid brightness value {value}, use a value from -4..4 inclusive"
+            )
+        self._write_group_3_settings(
+            [0x5587, abs(value) << 4, 0x9 if value < 0 else 0x1]
+        )
+
+    @property
+    def contrast(self):
+        """Sensor contrast adjustment, from -4 to 4 inclusive"""
+        contrast_abs = self._read_register(0x5587) >> 4
+        contrast_neg = self._read_register(0x5588) & 8
+        if contrast_neg:
+            return -contrast_abs
+        return contrast_abs
+
+    @contrast.setter
+    def contrast(self, value):
+        if not -3 <= value <= 3:
+            raise ValueError(
+                "Invalid contrast value {value}, use a value from -3..3 inclusive"
+            )
+        setting = _contrast_settings[value]
+        self._write_group_3_settings([0x5586, setting[0], 0x5585, setting[1]])
+
+    @property
+    def exposure_value(self):
+        """Sensor exposure (EV) adjustment, from -4 to 4 inclusive"""
+        return self._ev
+
+    @exposure_value.setter
+    def exposure_value(self, value):
+        if not -3 <= value <= 3:
+            raise ValueError(
+                "Invalid exposure value (EV) {value}, use a value from -4..4 inclusive"
+            )
+        for offset, reg_value in enumerate(_sensor_ev_levels[value]):
+            self._write_register(0x5381 + offset, reg_value)
+
+    @property
+    def white_balance(self):
+        """The white balance setting, one of the ``OV5640_WHITE_BALANCE_*`` constants"""
+        return self._white_balance
+
+    @white_balance.setter
+    def white_balance(self, value):
+        if not OV5640_WHITE_BALANCE_AUTO <= value <= OV5640_WHITE_BALANCE_INCANDESCENT:
+            raise ValueError(
+                "Invalid exposure value (EV) {value}, "
+                "use one of the OV5640_WHITE_BALANCE_* constants"
+            )
+        self._write_register(0x3212, 0x3)  # start group 3
+        for reg_addr, reg_value in zip(_light_registers, _light_modes[value]):
+            self._write_register(reg_addr, reg_value)
+        self._write_register(0x3212, 0x13)  # end group 3
+        self._write_register(0x3212, 0xA3)  # launch group 3
+
+    @property
+    def night_mode(self):
+        """Enable or disable the night mode setting of the sensor"""
+        return bool(self._read_register(0x3A00) & 0x04)
+
+    @night_mode.setter
+    def night_mode(self, value):
+        self._write_reg_bits(0x3A00, 0x04, value)
