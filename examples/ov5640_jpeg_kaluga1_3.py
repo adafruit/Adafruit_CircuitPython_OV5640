@@ -10,11 +10,9 @@ tested on v1.3.
 The audio board must be mounted between the Kaluga and the LCD, it provides the
 I2C pull-ups(!)
 
-You also need to place ov5640_jpeg_kaluga1_3_boot.py at CIRCUITPY/boot.py
-and reset the board to make the internal flash readable by CircuitPython.
-You can make CIRCUITPY readable from your PC by booting CircuitPython in
-safe mode or holding the "MODE" button on the audio daughterboard while
-powering on or resetting the board.
+You also need to place ov5640_jpeg_kaluga1_3_boot.py at CIRCUITPY/boot.py.
+Then, hold the Mode button (button K2 on the audio board) while resetting the
+board to make the internal flash readable by CircuitPython.
 """
 
 import time
