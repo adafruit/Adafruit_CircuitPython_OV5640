@@ -818,7 +818,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         shutdown=None,
         reset=None,
         mclk=None,
-        mclk_frequency=24_000_000,
+        mclk_frequency=20_000_000,
         i2c_address=0x3C,
         size=OV5640_SIZE_QQVGA,
     ):  # pylint: disable=too-many-arguments
@@ -838,7 +838,11 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 master clock signal, or None if the master clock signal is
                 already being generated.
             mclk_frequency (int): The frequency of the master clock to generate, \
-                ignored if mclk is None, requred if it is specified
+                ignored if mclk is None, requred if it is specified.
+                Note that the OV5640 requires a very low jitter clock,
+                so only specific (microcontroller-dependent) values may
+                work reliably.  On the ESP32-S2, a 20MHz clock can be generated
+                with sufficiently low jitter.
             i2c_address (int): The I2C address of the camera.
         """
 

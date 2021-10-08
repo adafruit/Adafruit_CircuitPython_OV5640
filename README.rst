@@ -87,7 +87,6 @@ Usage Example
         vsync=board.CAMERA_VSYNC,
         href=board.CAMERA_HREF,
         mclk=board.CAMERA_XCLK,
-        mclk_frequency=24_000_000,
         size=adafruit_ov5640.OV5640_SIZE_QQVGA,
     )
     print("print chip id")
