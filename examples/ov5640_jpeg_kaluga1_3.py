@@ -17,10 +17,24 @@ safe mode or holding the "MODE" button on the audio daughterboard while
 powering on or resetting the board.
 """
 
+import time
+
 import board
 import busio
 import adafruit_ov5640
+import microcontroller
 
+try:
+    with open("/boot_out.txt", "a") as f:
+        pass
+except OSError as e:
+    print(e)
+    print(
+        "A 'read-only filesystem' error occurs if you did not correctly install"
+        "\nov5640_jpeg_kaluga1_3_boot.py as CIRCUITPY/boot.py and reset the"
+        '\nboard while holding the "mode" button'
+    )
+    raise SystemExit
 
 bus = busio.I2C(scl=board.CAMERA_SIOC, sda=board.CAMERA_SIOD)
 cam = adafruit_ov5640.OV5640(
@@ -30,22 +44,28 @@ cam = adafruit_ov5640.OV5640(
     vsync=board.CAMERA_VSYNC,
     href=board.CAMERA_HREF,
     mclk=board.CAMERA_XCLK,
-    mclk_frequency=20_000_000,
-    size=adafruit_ov5640.OV5640_SIZE_QVGA,
+    size=adafruit_ov5640.OV5640_SIZE_SXGA,
 )
 
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_JPEG
+cam.quality = 5
 b = bytearray(cam.capture_buffer_size)
+print(f"Capturing jpeg image of up to {len(b)} bytes")
 jpeg = cam.capture(b)
 
 print(f"Captured {len(jpeg)} bytes of jpeg data")
 try:
-    with open("/jpeg.jpg", "wb") as f:
+    print("Writing to internal storage (this is SLOW)")
+    with open("/cam.jpg", "wb") as f:
         f.write(jpeg)
+    print("Wrote to CIRCUITPY/cam.jpg")
+    print("Resetting so computer sees new content of CIRCUITPY")
+    time.sleep(0.5)
+    microcontroller.reset()
+
 except OSError as e:
     print(e)
     print(
         "A 'read-only filesystem' error occurs if you did not correctly install"
         "\nov5640_jpeg_kaluga1_3_boot.py as CIRCUITPY/boot.py and reset the board"
     )
-print("Wrote to CIRCUITPY/jpeg.jpg")
