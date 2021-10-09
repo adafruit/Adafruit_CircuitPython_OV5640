@@ -46,8 +46,7 @@ except OSError as e:
         "A 'read-only filesystem' error occurs if you did not correctly install"
         "\nov5640_jpeg_kaluga1_3_boot.py as CIRCUITPY/boot.py and reset the"
         '\nboard while holding the "mode" button'
-        ""
-        "This message is also shown after the board takes a picture and auto-restarts"
+        "\n\nThis message is also shown after the board takes a picture and auto-restarts"
     )
     raise SystemExit
 
