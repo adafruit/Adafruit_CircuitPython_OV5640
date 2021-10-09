@@ -21,15 +21,30 @@ Press the "Record" button on the audio daughterboard to take a photo.
 """
 
 import os
-
 import time
+
 import analogio
 import board
 import busio
-import adafruit_ov5640
+import displayio
 import neopixel
-import storage
 import sdcardio
+import storage
+
+import adafruit_ili9341
+import adafruit_ov5640
+
+# Release any resources currently in use for the displays
+displayio.release_displays()
+spi = busio.SPI(MOSI=board.LCD_MOSI, clock=board.LCD_CLK)
+display_bus = displayio.FourWire(
+    spi,
+    command=board.LCD_D_C,
+    chip_select=board.LCD_CS,
+    reset=board.LCD_RST,
+    baudrate=80_000_000,
+)
+display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=90)
 
 V_MODE = 1.98
 V_RECORD = 2.41
