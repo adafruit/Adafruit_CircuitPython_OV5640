@@ -1165,14 +1165,14 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def quality(self):
-        """Controls the JPEG quality.  Valid range is from 5..55 inclusive"""
+        """Controls the JPEG quality.  Valid range is from 2..55 inclusive"""
         return self._read_register(_COMPRESSION_CTRL07) & 0x3F
 
     @quality.setter
     def quality(self, value: int):
-        if not 5 <= value < 55:
+        if not 2 <= value < 55:
             raise ValueError(
-                f"Invalid quality value {value}, use a value from 5..55 inclusive"
+                f"Invalid quality value {value}, use a value from 2..55 inclusive"
             )
         self._write_register(_COMPRESSION_CTRL07, value & 0x3F)
 

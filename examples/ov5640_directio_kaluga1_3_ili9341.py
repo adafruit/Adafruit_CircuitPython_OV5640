@@ -16,15 +16,11 @@ by rotation.  This example is written for one if the ILI9341 variants,
 the one which usually uses rotation=90 to get a landscape display.
 """
 
-import os
 import struct
 
-import analogio
 import board
 import busio
 import displayio
-import sdcardio
-import storage
 import adafruit_ov5640
 
 # Release any resources currently in use for the displays
