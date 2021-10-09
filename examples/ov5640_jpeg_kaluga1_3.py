@@ -38,7 +38,7 @@ display_bus = displayio.FourWire(
 display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=90)
 
 try:
-    with open("/boot_out.txt", "a") as f:
+    with open("/boot_out.txt", "ab") as f:
         pass
 except OSError as e:
     print(e)
@@ -48,7 +48,7 @@ except OSError as e:
         '\nboard while holding the "mode" button'
         "\n\nThis message is also shown after the board takes a picture and auto-restarts"
     )
-    raise SystemExit
+    raise SystemExit from e
 
 bus = busio.I2C(scl=board.CAMERA_SIOC, sda=board.CAMERA_SIOD)
 cam = adafruit_ov5640.OV5640(
@@ -78,7 +78,7 @@ try:
     print("Wrote to CIRCUITPY/cam.jpg")
     print("Resetting so computer sees new content of CIRCUITPY")
     time.sleep(0.5)
-    microcontroller.reset()
+    microcontroller.reset()  # pylint: disable=no-member
 
 except OSError as e:
     print(e)

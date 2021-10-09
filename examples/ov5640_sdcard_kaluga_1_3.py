@@ -75,7 +75,7 @@ def exists(filename):
     try:
         os.stat(filename)
         return True
-    except OSError as e:
+    except OSError as _:
         return False
 
 
@@ -83,7 +83,7 @@ _image_counter = 0
 
 
 def open_next_image():
-    global _image_counter
+    global _image_counter  # pylint: disable=global-statement
     while True:
         filename = f"/sd/img{_image_counter:04d}.jpg"
         _image_counter += 1
@@ -101,7 +101,7 @@ print("Press 'record' button to take a JPEG image")
 while True:
     pixel[0] = 0x0000FF
     pixel.write()
-    a_voltage = a.value * a.reference_voltage / 65535
+    a_voltage = a.value * a.reference_voltage / 65535  # pylint: disable=no-member
     record_pressed = abs(a_voltage - V_RECORD) < 0.05
     if record_pressed:
         pixel[0] = 0xFF0000
@@ -109,7 +109,8 @@ while True:
         time.sleep(0.01)
         jpeg = cam.capture(b)
         print(
-            f"Captured {len(jpeg)} bytes of jpeg data (had allocated {cam.capture_buffer_size} bytes"
+            f"Captured {len(jpeg)} bytes of jpeg data"
+            f" (had allocated {cam.capture_buffer_size} bytes"
         )
         print(f"Resolution {cam.width}x{cam.height}")
         try:
@@ -123,5 +124,7 @@ while True:
         except OSError as e:
             print(e)
         while record_pressed:
-            a_voltage = a.value * a.reference_voltage / 65535
+            a_voltage = (
+                a.value * a.reference_voltage / 65535
+            )  # pylint: disable=no-member
             record_pressed = abs(a_voltage - V_RECORD) < 0.05
