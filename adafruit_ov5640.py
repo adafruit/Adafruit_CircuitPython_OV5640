@@ -1198,7 +1198,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 "Invalid brightness value {value}, use a value from -4..4 inclusive"
             )
         self._write_group_3_settings(
-            [0x5587, abs(value) << 4, 0x9 if value < 0 else 0x1]
+            [0x5587, abs(value) << 4, 0x5588, 0x9 if value < 0 else 0x1]
         )
 
     @property
