@@ -16,19 +16,22 @@ by rotation.  This example is written for one if the ILI9341 variants,
 the one which usually uses rotation=90 to get a landscape display.
 """
 
-import os
 import struct
-
-import analogio
 import board
 import busio
+import digitalio
 import displayio
-import sdcardio
-import storage
 import adafruit_ov5640
+from adafruit_ticks import ticks_ms, ticks_add, ticks_less
+
+# Set to True to enable the various effects & exposure modes to be tested
+test_effects = False
 
 # Release any resources currently in use for the displays
 displayio.release_displays()
+
+state = digitalio.DigitalInOut(board.IO4)
+state.switch_to_output(True)
 
 spi = busio.SPI(MOSI=board.LCD_MOSI, clock=board.LCD_CLK)
 display_bus = displayio.FourWire(
@@ -85,16 +88,109 @@ cam.test_pattern = False
 cam.effect = adafruit_ov5640.OV5640_SPECIAL_EFFECT_NONE
 cam.saturation = 3
 bitmap = displayio.Bitmap(cam.width, cam.height, 65536)
-
+print(len(memoryview(bitmap)))
 display.auto_refresh = False
+
+
+def special_modes(cam):
+    def effect_modes(cam):
+        for i in [
+            "NONE",
+            "NEGATIVE",
+            "GRAYSCALE",
+            "RED_TINT",
+            "GREEN_TINT",
+            "BLUE_TINT",
+            "SEPIA",
+        ]:
+            print(f"Effect {i}")
+            cam.effect = getattr(adafruit_ov5640, f"OV5640_SPECIAL_EFFECT_{i}")
+            yield
+        cam.effect = adafruit_ov5640.OV5640_SPECIAL_EFFECT_NONE
+
+    def saturation_modes(cam):
+        for i in range(-4, 5):
+            print(f"Saturation {i}")
+            cam.saturation = i
+            yield
+        cam.saturation = 0
+
+    def brightness_modes(cam):
+        for i in range(-4, 5):
+            print(f"Brightness {i}")
+            cam.brightness = i
+            yield
+        cam.brightness = 0
+
+    def contrast_modes(cam):
+        for i in range(-3, 4):
+            print(f"Contrast {i}")
+            cam.contrast = i
+            yield
+        cam.contrast = 0
+
+    def white_balance_modes(cam):
+        for i in ["AUTO", "SUNNY", "FLUORESCENT", "CLOUDY", "INCANDESCENT"]:
+            print(f"White Balance {i}")
+            cam.white_balance = getattr(adafruit_ov5640, f"OV5640_WHITE_BALANCE_{i}")
+            yield
+        cam.white_balance = adafruit_ov5640.OV5640_WHITE_BALANCE_AUTO
+
+    def exposure_value_modes(cam):
+        for i in range(-3, 4):
+            print(f"EV {i}")
+            cam.exposure_value = i
+            yield
+        cam.exposure_value = 0
+
+    def nite_modes(cam):
+        print(f"Night Mode On")
+        cam.night_mode = True
+        print(cam.night_mode)
+        yield
+        print(f"Night Mode Off")
+        cam.night_mode = False
+        print(cam.night_mode)
+        yield
+
+    def test_modes(cam):
+        print("Test pattern On")
+        cam.test_pattern = True
+        yield
+        print("Test pattern Off")
+        cam.test_pattern = False
+        yield
+
+    while True:
+        yield from test_modes(cam)
+        yield from contrast_modes(cam)
+        yield from effect_modes(cam)
+        yield from saturation_modes(cam)
+        yield from brightness_modes(cam)
+        # These don't work right (yet)
+        # yield from exposure_value_modes(cam)  # Issue #8
+        # yield from nite_modes(cam) # Issue #6
 
 
 def main():
     display.auto_refresh = False
     display_bus.send(42, struct.pack(">hh", 0, bitmap.width - 1))
     display_bus.send(43, struct.pack(">hh", 0, bitmap.height - 1))
+
+    if test_effects:
+        time_per_effect = 1500
+        deadline = ticks_ms() + time_per_effect
+        effects = special_modes(cam)
+
     while True:
+        if test_effects:
+            now = ticks_ms()
+            if ticks_less(deadline, now):
+                deadline += time_per_effect
+                next(effects)
+        state.value = True
         cam.capture(bitmap)
+        state.value = False
         display_bus.send(44, bitmap)
 
 
