@@ -17,6 +17,7 @@ the one which usually uses rotation=90 to get a landscape display.
 """
 
 import struct
+
 import board
 import busio
 import digitalio

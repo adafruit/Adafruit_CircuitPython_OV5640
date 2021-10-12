@@ -21,15 +21,30 @@ Press the "Record" button on the audio daughterboard to take a photo.
 """
 
 import os
-
 import time
+
 import analogio
 import board
 import busio
-import adafruit_ov5640
+import displayio
 import neopixel
-import storage
 import sdcardio
+import storage
+
+import adafruit_ili9341
+import adafruit_ov5640
+
+# Release any resources currently in use for the displays
+displayio.release_displays()
+spi = busio.SPI(MOSI=board.LCD_MOSI, clock=board.LCD_CLK)
+display_bus = displayio.FourWire(
+    spi,
+    command=board.LCD_D_C,
+    chip_select=board.LCD_CS,
+    reset=board.LCD_RST,
+    baudrate=80_000_000,
+)
+display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240, rotation=90)
 
 V_MODE = 1.98
 V_RECORD = 2.41
@@ -60,7 +75,7 @@ def exists(filename):
     try:
         os.stat(filename)
         return True
-    except OSError as e:
+    except OSError as _:
         return False
 
 
@@ -68,7 +83,7 @@ _image_counter = 0
 
 
 def open_next_image():
-    global _image_counter
+    global _image_counter  # pylint: disable=global-statement
     while True:
         filename = f"/sd/img{_image_counter:04d}.jpg"
         _image_counter += 1
@@ -86,7 +101,7 @@ print("Press 'record' button to take a JPEG image")
 while True:
     pixel[0] = 0x0000FF
     pixel.write()
-    a_voltage = a.value * a.reference_voltage / 65535
+    a_voltage = a.value * a.reference_voltage / 65535  # pylint: disable=no-member
     record_pressed = abs(a_voltage - V_RECORD) < 0.05
     if record_pressed:
         pixel[0] = 0xFF0000
@@ -94,7 +109,8 @@ while True:
         time.sleep(0.01)
         jpeg = cam.capture(b)
         print(
-            f"Captured {len(jpeg)} bytes of jpeg data (had allocated {cam.capture_buffer_size} bytes"
+            f"Captured {len(jpeg)} bytes of jpeg data"
+            f" (had allocated {cam.capture_buffer_size} bytes"
         )
         print(f"Resolution {cam.width}x{cam.height}")
         try:
@@ -108,5 +124,7 @@ while True:
         except OSError as e:
             print(e)
         while record_pressed:
-            a_voltage = a.value * a.reference_voltage / 65535
+            a_voltage = (
+                a.value * a.reference_voltage / 65535
+            )  # pylint: disable=no-member
             record_pressed = abs(a_voltage - V_RECORD) < 0.05
