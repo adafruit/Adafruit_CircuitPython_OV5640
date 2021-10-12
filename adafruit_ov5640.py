@@ -571,7 +571,7 @@ _ov5640_color_settings = {
 _contrast_settings = [
     [0x20, 0x00], #  0
     [0x24, 0x10], # +1
-    [0x1a, 0x13], # +2
+    [0x28, 0x18], # +2
     [0x2c, 0x1c], # +3
     [0x14, 0x14], # -3
     [0x18, 0x18], # -2
@@ -625,7 +625,7 @@ OV5640_SPECIAL_EFFECT_BLUE_TINT = 5
 OV5640_SPECIAL_EFFECT_SEPIA = 6
 
 _sensor_special_effects = [
-    [0x06, 0x40, 0x2C, 0x08],  # Normal
+    [0x06, 0x40, 0x10, 0x08],  # Normal
     [0x46, 0x40, 0x28, 0x08],  # Negative
     [0x1E, 0x80, 0x80, 0x08],  # Grayscale
     [0x1E, 0x80, 0xC0, 0x08],  # Red Tint
@@ -1198,7 +1198,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 "Invalid brightness value {value}, use a value from -4..4 inclusive"
             )
         self._write_group_3_settings(
-            [0x5587, abs(value) << 4, 0x9 if value < 0 else 0x1]
+            [0x5587, abs(value) << 4, 0x5588, 0x9 if value < 0 else 0x1]
         )
 
     @property
