@@ -1065,7 +1065,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 sys_mul = 180
             self._set_pll(False, sys_mul, 4, 2, False, 2, True, 4)
         else:
-            self._set_pll(False, 8, 1, 1, False, 1, True, 4)
+            self._set_pll(False, 32, 1, 1, False, 1, True, 4)
 
         self._set_colorspace()
 
