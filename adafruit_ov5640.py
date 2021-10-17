@@ -800,7 +800,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
                 self._write_register(register, value)
 
     def _write_reg_bits(self, reg, mask, enable):
-        val = val = self._read_register(reg)
+        val = self._read_register(reg)
         if enable:
             val |= mask
         else:
