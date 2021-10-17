@@ -849,6 +849,21 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             i2c_address (int): The I2C address of the camera.
         """
 
+        # we're supposed to go into shutdown if we can, first
+        if shutdown:
+            self._shutdown = digitalio.DigitalInOut(shutdown)
+            self._shutdown.switch_to_output(True)
+        else:
+            self._shutdown = None
+
+        if reset:
+            self._reset = digitalio.DigitalInOut(reset)
+            self._reset.switch_to_output(False)
+        else:
+            self._reset = None
+
+        time.sleep(0.1)
+
         # Initialize the master clock
         if mclk:
             self._mclk_pwm = pwmio.PWMOut(mclk, frequency=mclk_frequency)
@@ -856,23 +871,15 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         else:
             self._mclk_pwm = None
 
-        if shutdown:
-            self._shutdown = digitalio.DigitalInOut(shutdown)
-            self._shutdown.switch_to_output(True)
-            time.sleep(0.1)
+        if self._shutdown:
             self._shutdown.switch_to_output(False)
-            time.sleep(0.3)
-        else:
-            self._shutdown = None
+            time.sleep(0.1)
 
-        if reset:
-            self._reset = digitalio.DigitalInOut(reset)
-            self._reset.switch_to_output(False)
-            time.sleep(0.1)
+
+        if self._reset:
             self._reset.switch_to_output(True)
-            time.sleep(0.1)
-        else:
-            self._reset = None
+
+        time.sleep(0.1)
 
         # Now that the master clock is running, we can initialize i2c comms
         super().__init__(i2c_bus, i2c_address)
