@@ -1134,9 +1134,12 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         return self._test_pattern
 
     @test_pattern.setter
-    def test_pattern(self, value: bool) -> None:
+    def test_pattern(self, value) -> None:
+        if type(value) is bool:
+            self._write_register(_PRE_ISP_TEST_SETTING_1, value << 7)
+        else:
+            self._write_register(_PRE_ISP_TEST_SETTING_1, 1 << 7 | value)
         self._test_pattern = value
-        self._write_register(_PRE_ISP_TEST_SETTING_1, value << 7)
 
     @property
     def saturation(self):
