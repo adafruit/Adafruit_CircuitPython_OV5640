@@ -99,6 +99,9 @@ _AEC_PK_MANUAL = const(0x3503)
 
 # gain = {0x350A[1:0], 0x350B[7:0]} / 16
 
+_STROBE_CTRL = const(0x3b00)
+_FREX_MODE = const(0x3b07)
+_PAD_OUTPUT_ENABLE00 = const(0x3016)
 
 _X_ADDR_ST_H = const(0x3800)
 # Bit[3:0]: X address start[11:8]
@@ -1259,3 +1262,11 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @night_mode.setter
     def night_mode(self, value):
         self._write_reg_bits(0x3A00, 0x04, value)
+
+    @property
+    def powerdown(self):
+        return bool(self._read_register(_SYSTEM_CTROL0) & 0x40)
+
+    @powerdown.setter
+    def powerdown(self, value):
+        self._write_reg_bits(_SYSTEM_CTROL0, 0x40, bool(value))
