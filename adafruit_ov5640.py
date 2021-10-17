@@ -101,7 +101,19 @@ _AEC_PK_MANUAL = const(0x3503)
 
 _STROBE_CTRL = const(0x3b00)
 _FREX_MODE = const(0x3b07)
+_FREX_REQUEST = const(0x3B08)
 _PAD_OUTPUT_ENABLE00 = const(0x3016)
+_PAD_OUTPUT_VALUE00 = const(0x3019)
+_PAD_SELECT00 = const(0x301C)
+
+FREX_MODE_0 = 1
+FREX_MODE_1 = 2
+FREX_MODE_ROLL = 3
+
+STROBE_MODE_XENON = 0
+STROBE_MODE_LED1 = 1
+STROBE_MODE_LED2 = 2
+STROBE_MODE_LED3 = 3
 
 _X_ADDR_ST_H = const(0x3800)
 # Bit[3:0]: X address start[11:8]
@@ -902,6 +914,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._ev = 0
         self._white_balance = 0
         self.size = size
+        self._strobe_enabled = False
 
     chip_id = _RegBits16(_CHIP_ID_HIGH, 0, 0xFFFF)
 
@@ -1019,6 +1032,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._shutdown.deinit()
         if self._reset:
             self._reset.deinit()
+        self.powerdown = True
 
     @property
     def size(self):
@@ -1280,3 +1294,40 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @powerdown.setter
     def powerdown(self, value):
         self._write_reg_bits(_SYSTEM_CTROL0, 0x40, bool(value))
+
+    def strobe_config(self, enabled, pulse_invert, frex_mode, strobe_mode):
+        # set the FREX mode rolling
+        if frex_mode not in (FREX_MODE_0, FREX_MODE_1, FREX_MODE_ROLL):
+            raise ValueError("Frex mode must be 0, 1 or 2 (rolling)")
+        self._write_register(_FREX_MODE, frex_mode)
+        # set the output pin
+        self._write_register(_PAD_OUTPUT_ENABLE00, 0x2)
+        # set the pulse invert, mode and enable
+        if strobe_mode not in (STROBE_MODE_XENON, STROBE_MODE_LED1, STROBE_MODE_LED2, STROBE_MODE_LED3):
+            raise ValueError("Strobe mode must be 0~3")
+        self._write_register(_STROBE_CTRL,
+                             (bool(enabled) << 7) |
+                             (bool(pulse_invert) << 6) |
+                             (strobe_mode & 0x3))
+
+        #print("strobe reg: ", hex(self._read_register(_STROBE_CTRL)))
+        #print("pad00 reg: ", hex(self._read_register(_PAD_OUTPUT_ENABLE00)))
+        #print("clock00 reg: ", hex(self._read_register(0x3004)))
+
+    @property
+    def strobe_request(self):
+        return bool(self._read_register(_FREX_REQUEST))
+
+    @strobe_request.setter
+    def strobe_request(self, value):
+        self._write_register(_FREX_REQUEST, bool(value))
+
+    @property
+    def strobe_pin(self):
+        return bool(self._read_register(_PAD_OUTPUT_VALUE00))
+
+    @strobe_pin.setter
+    def strobe_pin(self, value):
+        self._write_register(_PAD_OUTPUT_ENABLE00, 0x02)
+        self._write_register(_PAD_SELECT00, 0x02)
+        self._write_register(_PAD_OUTPUT_VALUE00, bool(value) << 1)
