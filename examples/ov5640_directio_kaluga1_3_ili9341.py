@@ -22,8 +22,8 @@ import board
 import busio
 import digitalio
 import displayio
+from adafruit_ticks import ticks_ms, ticks_less
 import adafruit_ov5640
-from adafruit_ticks import ticks_ms, ticks_add, ticks_less
 
 # Set to True to enable the various effects & exposure modes to be tested
 test_effects = False
@@ -93,8 +93,8 @@ print(len(memoryview(bitmap)))
 display.auto_refresh = False
 
 
-def special_modes(cam):
-    def effect_modes(cam):
+def special_modes(cam_obj):
+    def effect_modes(cam_obj):
         for i in [
             "NONE",
             "NEGATIVE",
@@ -105,72 +105,74 @@ def special_modes(cam):
             "SEPIA",
         ]:
             print(f"Effect {i}")
-            cam.effect = getattr(adafruit_ov5640, f"OV5640_SPECIAL_EFFECT_{i}")
+            cam_obj.effect = getattr(adafruit_ov5640, f"OV5640_SPECIAL_EFFECT_{i}")
             yield
-        cam.effect = adafruit_ov5640.OV5640_SPECIAL_EFFECT_NONE
+        cam_obj.effect = adafruit_ov5640.OV5640_SPECIAL_EFFECT_NONE
 
-    def saturation_modes(cam):
+    def saturation_modes(cam_obj):
         for i in range(-4, 5):
             print(f"Saturation {i}")
-            cam.saturation = i
+            cam_obj.saturation = i
             yield
-        cam.saturation = 0
+        cam_obj.saturation = 0
 
-    def brightness_modes(cam):
+    def brightness_modes(cam_obj):
         for i in range(-4, 5):
             print(f"Brightness {i}")
-            cam.brightness = i
+            cam_obj.brightness = i
             yield
-        cam.brightness = 0
+        cam_obj.brightness = 0
 
-    def contrast_modes(cam):
+    def contrast_modes(cam_obj):
         for i in range(-3, 4):
             print(f"Contrast {i}")
-            cam.contrast = i
+            cam_obj.contrast = i
             yield
-        cam.contrast = 0
+        cam_obj.contrast = 0
 
-    def white_balance_modes(cam):
+    def white_balance_modes(cam_obj):  # pylint: disable=unused-variable
         for i in ["AUTO", "SUNNY", "FLUORESCENT", "CLOUDY", "INCANDESCENT"]:
             print(f"White Balance {i}")
-            cam.white_balance = getattr(adafruit_ov5640, f"OV5640_WHITE_BALANCE_{i}")
+            cam_obj.white_balance = getattr(
+                adafruit_ov5640, f"OV5640_WHITE_BALANCE_{i}"
+            )
             yield
-        cam.white_balance = adafruit_ov5640.OV5640_WHITE_BALANCE_AUTO
+        cam_obj.white_balance = adafruit_ov5640.OV5640_WHITE_BALANCE_AUTO
 
-    def exposure_value_modes(cam):
+    def exposure_value_modes(cam_obj):  # pylint: disable=unused-variable
         for i in range(-3, 4):
             print(f"EV {i}")
-            cam.exposure_value = i
+            cam_obj.exposure_value = i
             yield
-        cam.exposure_value = 0
+        cam_obj.exposure_value = 0
 
-    def nite_modes(cam):
-        print(f"Night Mode On")
-        cam.night_mode = True
-        print(cam.night_mode)
+    def nite_modes(cam_obj):  # pylint: disable=unused-variable
+        print("Night Mode On")
+        cam_obj.night_mode = True
+        print(cam_obj.night_mode)
         yield
-        print(f"Night Mode Off")
-        cam.night_mode = False
-        print(cam.night_mode)
+        print("Night Mode Off")
+        cam_obj.night_mode = False
+        print(cam_obj.night_mode)
         yield
 
-    def test_modes(cam):
+    def test_modes(cam_obj):
         print("Test pattern On")
-        cam.test_pattern = True
+        cam_obj.test_pattern = True
         yield
         print("Test pattern Off")
-        cam.test_pattern = False
+        cam_obj.test_pattern = False
         yield
 
     while True:
-        yield from test_modes(cam)
-        yield from contrast_modes(cam)
-        yield from effect_modes(cam)
-        yield from saturation_modes(cam)
-        yield from brightness_modes(cam)
+        yield from test_modes(cam_obj)
+        yield from contrast_modes(cam_obj)
+        yield from effect_modes(cam_obj)
+        yield from saturation_modes(cam_obj)
+        yield from brightness_modes(cam_obj)
         # These don't work right (yet)
-        # yield from exposure_value_modes(cam)  # Issue #8
-        # yield from nite_modes(cam) # Issue #6
+        # yield from exposure_value_modes(cam_obj)  # Issue #8
+        # yield from nite_modes(cam_obj) # Issue #6
 
 
 def main():
