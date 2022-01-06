@@ -723,11 +723,11 @@ class _RegBits:
         self.shift = shift
         self.mask = mask
 
-    def __get__(self, obj: 'OV5640', objtype: Optional[type] = None) -> int:
+    def __get__(self, obj: "OV5640", objtype: Optional[type] = None) -> int:
         reg_value = obj._read_register(self.reg)
         return (reg_value >> self.shift) & self.mask
 
-    def __set__(self, obj: 'OV5640', value: int) -> None:
+    def __set__(self, obj: "OV5640", value: int) -> None:
         if value & ~self.mask:
             raise ValueError(
                 f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}"
@@ -744,11 +744,11 @@ class _RegBits16:
         self.shift = shift
         self.mask = mask
 
-    def __get__(self, obj: 'OV5640', objtype: Optional[type] = None) -> int:
+    def __get__(self, obj: "OV5640", objtype: Optional[type] = None) -> int:
         reg_value = obj._read_register16(self.reg)
         return (reg_value >> self.shift) & self.mask
 
-    def __set__(self, obj: 'OV5640', value: int) -> None:
+    def __set__(self, obj: "OV5640", value: int) -> None:
         if value & ~self.mask:
             raise ValueError(
                 f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}"
