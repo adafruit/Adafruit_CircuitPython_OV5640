@@ -827,6 +827,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         mclk: Optional[Pin] = None,
         mclk_frequency: int = 20_000_000,
         i2c_address: int = 0x3C,
+        size: int = OV5640_SIZE_QQVGA,
     ):  # pylint: disable=too-many-arguments
         """
         Args:
