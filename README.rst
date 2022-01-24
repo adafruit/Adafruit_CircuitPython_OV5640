@@ -3,7 +3,7 @@ Introduction
 
 
 .. image:: https://readthedocs.org/projects/adafruit-circuitpython-ov5640/badge/?version=latest
-    :target: https://circuitpython.readthedocs.io/projects/ov5640/en/latest/
+    :target: https://docs.circuitpython.org/projects/ov5640/en/latest/
     :alt: Documentation Status
 
 
