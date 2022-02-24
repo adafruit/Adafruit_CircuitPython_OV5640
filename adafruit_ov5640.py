@@ -37,6 +37,7 @@ try:
     from typing import Optional, Sequence, List, Union
     from busio import I2C
     from microcontroller import Pin
+    from digitalio import DigitalInOut
 except ImportError:
     pass
 
@@ -822,8 +823,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         clock: Pin,
         vsync: Pin,
         href: Pin,
-        shutdown: Optional[Pin] = None,
-        reset: Optional[Pin] = None,
+        shutdown: Optional[DigitalInOut] = None,
+        reset: Optional[DigitalInOut] = None,
         mclk: Optional[Pin] = None,
         mclk_frequency: int = 20_000_000,
         i2c_address: int = 0x3C,
@@ -837,9 +838,9 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             vsync (microcontroller.Pin): The vsync signal from the OV5640.
             href (microcontroller.Pin): The href signal from the OV5640, \
                 sometimes inaccurately called hsync.
-            shutdown (Optional[microcontroller.Pin]): If not None, the shutdown
+            shutdown (Optional[digitalio.DigitalInOut]): If not None, the shutdown
                 signal to the camera, also called the powerdown or enable pin.
-            reset (Optional[microcontroller.Pin]): If not None, the reset signal
+            reset (Optional[digitalio.DigitalInOut]): If not None, the reset signal
                 to the camera.
             mclk (Optional[microcontroller.Pin]): The pin on which to create a
                 master clock signal, or None if the master clock signal is
@@ -862,7 +863,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._mclk_pwm = None
 
         if shutdown:
-            self._shutdown = digitalio.DigitalInOut(shutdown)
+            self._shutdown = shutdown
             self._shutdown.switch_to_output(True)
             time.sleep(0.1)
             self._shutdown.switch_to_output(False)
@@ -871,7 +872,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
             self._shutdown = None
 
         if reset:
-            self._reset = digitalio.DigitalInOut(reset)
+            self._reset = reset
             self._reset.switch_to_output(False)
             time.sleep(0.1)
             self._reset.switch_to_output(True)
