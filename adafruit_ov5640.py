@@ -538,7 +538,7 @@ _sensor_default_regs = [
     0x3008, 0x02,
     # 50Hz
     0x3C00, 0x04,
-    _REG_DLY, 300,
+    #_REG_DLY, 300,
 ]
 
 _sensor_format_jpeg = [
@@ -862,23 +862,25 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         else:
             self._mclk_pwm = None
 
-        if shutdown:
-            self._shutdown = shutdown
-            self._shutdown.switch_to_output(True)
-            time.sleep(0.1)
-            self._shutdown.switch_to_output(False)
-            time.sleep(0.3)
-        else:
-            self._shutdown = None
-
         if reset:
             self._reset = reset
             self._reset.switch_to_output(False)
-            time.sleep(0.1)
-            self._reset.switch_to_output(True)
-            time.sleep(0.1)
         else:
             self._reset = None
+
+        if shutdown:
+            self._shutdown = shutdown
+            self._shutdown.switch_to_output(True)
+            time.sleep(0.005) # t2, 5ms stability
+            self._shutdown.switch_to_output(False)
+        else:
+            self._shutdown = None
+
+        if self._reset:
+            time.sleep(0.001) # t3, 1ms delay from pwdn 
+            self._reset.switch_to_output(True)
+            time.sleep(0.02)
+
 
         # Now that the master clock is running, we can initialize i2c comms
         super().__init__(i2c_bus, i2c_address)
