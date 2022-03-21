@@ -30,7 +30,6 @@ Implementation Notes
 import time
 import imagecapture
 import pwmio
-import digitalio
 from adafruit_bus_device.i2c_device import I2CDevice
 
 try:
@@ -742,7 +741,7 @@ _sensor_format_rgb565 = [
     _FORMAT_CTRL00, 0x61,  # RGB565 (BGR)
     _SYSTEM_RESET02, 0x1C, # reset jfifo, sfifo, jpg, fmux, avg
     _CLOCK_ENABLE02, 0xC3, # reset to how it was before (no jpg clock)
-    
+
 ]
 
 _ov5640_color_settings = {
@@ -1047,16 +1046,15 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         if shutdown:
             self._shutdown = shutdown
             self._shutdown.switch_to_output(True)
-            time.sleep(0.005) # t2, 5ms stability
+            time.sleep(0.005)  # t2, 5ms stability
             self._shutdown.switch_to_output(False)
         else:
             self._shutdown = None
 
         if self._reset:
-            time.sleep(0.001) # t3, 1ms delay from pwdn 
+            time.sleep(0.001)  # t3, 1ms delay from pwdn
             self._reset.switch_to_output(True)
             time.sleep(0.02)
-
 
         # Now that the master clock is running, we can initialize i2c comms
         super().__init__(i2c_bus, i2c_address)
