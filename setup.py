@@ -26,7 +26,7 @@ setup(
     name="adafruit-circuitpython-ov5640",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    description="REPLACE",
+    description="CircuitPython driver for OV5640 Camera",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     # The project's main homepage.
