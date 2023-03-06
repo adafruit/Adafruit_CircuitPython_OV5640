@@ -1,67 +1,18 @@
-import sys
+# SPDX-FileCopyrightText: Copyright (c) 2023 Lady Ada for Adafruit Industries
+#
+# SPDX-License-Identifier: Unlicense
+
+"""Capture an images from the camera and display on a ST7789 with
+displayio.
+
+This demo is designed to run on the Raspberry Pi Pico, but you can adapt it
+to other boards by changing the constructors for `bus` and `cam`
+appropriately.
+
+Remember to take the lens cap off!
+"""
 import time
-import busio
-import board
-import digitalio
-import adafruit_ov5640
-
-print("construct bus")
-bus = busio.I2C(board.GP9, board.GP8)
-print("construct camera")
-reset = digitalio.DigitalInOut(board.GP10)
-cam = adafruit_ov5640.OV5640(
-    bus,
-    data_pins=(board.GP12,board.GP13,board.GP14,board.GP15,board.GP16,board.GP17,board.GP18,board.GP19),  # [16]     [org]
-    clock=board.GP11,  # [15]     [blk]
-    vsync=board.GP7,  # [10]     [brn]
-    href=board.GP21,  # [27/o14] [red]
-    mclk=board.GP20,  # [16/o15]
-    shutdown=None,
-    reset=reset,
-    size=adafruit_ov5640.OV5640_SIZE_QQVGA,
-)
-print("print chip id")
-print(cam.chip_id)
-
-
-cam.colorspace = adafruit_ov5640.OV5640_COLOR_YUV
-cam.flip_y = True
-cam.flip_x = True
-cam.test_pattern = False
-
-buf = bytearray(cam.capture_buffer_size)
-chars = b" .':-+=*%$#"
-remap = [chars[i * (len(chars) - 1) // 255] for i in range(256)]
-
-width = cam.width
-row = bytearray(width)
-
-print("capturing")
-cam.capture(buf)
-print("capture complete")
-
-sys.stdout.write("\033[2J")
-while True:
-    cam.capture(buf)
-    for j in range(0, cam.height, 2):
-        sys.stdout.write(f"\033[{j//2}H")
-        for i in range(cam.width):
-            row[i] = remap[buf[2 * (width * j + i)]]
-        sys.stdout.write(row)
-        sys.stdout.write("\033[K")
-    sys.stdout.write("\033[J")
-    time.sleep(0.1)
-
-
-import time
-from adafruit_ov7670 import (
-    OV7670,
-    OV7670_SIZE_DIV1,
-    OV7670_SIZE_DIV16,
-    OV7670_TEST_PATTERN_COLOR_BAR,
-    OV7670_TEST_PATTERN_SHIFTING_1,
-    OV7670_TEST_PATTERN_COLOR_BAR_FADE,
-)
+from adafruit_ov7670 import OV7670, OV7670_SIZE_DIV1, OV7670_SIZE_DIV16
 from displayio import (
     Bitmap,
     Group,
@@ -106,7 +57,7 @@ cam = OV7670(
 width = display.width
 height = display.height
 
-#cam.test_pattern = OV7670_TEST_PATTERN_COLOR_BAR_FADE
+# cam.test_pattern = OV7670_TEST_PATTERN_COLOR_BAR_FADE
 bitmap = None
 # Select the biggest size for which we can allocate a bitmap successfully, and
 # which is not bigger than the display
@@ -126,7 +77,7 @@ print(width, height, cam.width, cam.height)
 if bitmap is None:
     raise SystemExit("Could not allocate a bitmap")
 
-g = Group(scale=1, x=(width-cam.width)//2, y=(height-cam.height)//2)
+g = Group(scale=1, x=(width - cam.width) // 2, y=(height - cam.height) // 2)
 tg = TileGrid(
     bitmap, pixel_shader=ColorConverter(input_colorspace=Colorspace.RGB565_SWAPPED)
 )
