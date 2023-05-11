@@ -176,6 +176,9 @@ def special_modes(cam_obj):
 
 
 def main():
+    deadline = 0
+    effects = iter((None,))
+
     display.auto_refresh = False
     display_bus.send(42, struct.pack(">hh", 0, bitmap.width - 1))
     display_bus.send(43, struct.pack(">hh", 0, bitmap.height - 1))
