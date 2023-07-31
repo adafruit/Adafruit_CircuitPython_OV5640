@@ -243,7 +243,7 @@ def take_stop_motion_gif(n_frames=10, replay_frame_time=0.3):
                     )
 
                 # CircuitPython Versions >= 9.0.0
-                elif hasattr(bitmaptools, "blit"):
+                else:
                     bitmaptools.blit(
                         old_frame,
                         frame,
