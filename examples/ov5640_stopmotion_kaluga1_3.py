@@ -153,7 +153,7 @@ next_filename("gif")
 
 # Blank the whole display, we'll draw what we want with directio
 empty_group = displayio.Group()
-display.show(empty_group)
+display.root_group = empty_group
 display.auto_refresh = False
 display.refresh()
 
