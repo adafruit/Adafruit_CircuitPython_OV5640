@@ -39,7 +39,7 @@ following command to install:
 
 .. code-block:: shell
 
-    circup install ov5640
+    circup install adafruit_ov5640
 
 Or the following command to update an existing version:
 
