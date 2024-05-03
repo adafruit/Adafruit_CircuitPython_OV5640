@@ -1178,7 +1178,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def _send_autofocus_command(self, command, msg):  # pylint: disable=unused-argument
         self._write_register(_OV5640_CMD_ACK, 0x01)  # clear command ack
         self._write_register(_OV5640_CMD_MAIN, command)  # send command
-        for _ in range(100):
+        for _ in range(1000):
             if self._read_register(_OV5640_CMD_ACK) == 0x0:  # command is finished
                 return True
             time.sleep(0.01)
