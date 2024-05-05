@@ -38,7 +38,7 @@ classifiers = [
 dynamic = ["dependencies", "optional-dependencies"]
 
 [tool.setuptools]
-packages = ["adafruit_ov5640"]
+py-modules = ["adafruit_ov5640"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
