@@ -1543,15 +1543,16 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
     @property
     def exposure_value(self) -> int:
-        """Sensor exposure (EV) adjustment, from -4 to 4 inclusive"""
+        """Sensor exposure (EV) adjustment, from -3 to 3 inclusive"""
         return self._ev
 
     @exposure_value.setter
     def exposure_value(self, value: int) -> None:
         if not -3 <= value <= 3:
             raise ValueError(
-                "Invalid exposure value (EV) {value}, use a value from -4..4 inclusive"
+                "Invalid exposure value (EV) {value}, use a value from -3..3 inclusive"
             )
+        self._ev = value
         for offset, reg_value in enumerate(_sensor_ev_levels[value]):
             self._write_register(0x5381 + offset, reg_value)
 
@@ -1567,6 +1568,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 "Invalid exposure value (EV) {value}, "
                 "use one of the OV5640_WHITE_BALANCE_* constants"
             )
+        self._white_balance = value
         self._write_register(0x3212, 0x3)  # start group 3
         for reg_addr, reg_value in zip(_light_registers, _light_modes[value]):
             self._write_register(reg_addr, reg_value)
