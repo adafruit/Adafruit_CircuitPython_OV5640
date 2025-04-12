@@ -1236,7 +1236,9 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def capture_buffer_size(self) -> int:
         """Return the size of capture buffer to use with current resolution & colorspace settings"""
         if self.colorspace == OV5640_COLOR_JPEG:
-            return self.width * self.height // self.quality
+            #  This is somewhat arbirary but seems to work for a wide range of JPEG images
+            #  the user can chose to further scale the buffer in the user code  if necessary
+            return 2 * (self.width * self.height // self.quality)
         if self.colorspace == OV5640_COLOR_GRAYSCALE:
             return self.width * self.height
         return self.width * self.height * 2
