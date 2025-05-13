@@ -12,12 +12,14 @@ to the microSD card.
 
 import os
 import time
-import busio
+
 import board
+import busio
 import digitalio
 import keypad
 import sdcardio
 import storage
+
 import adafruit_ov5640
 
 print("Initializing SD card")
@@ -65,18 +67,25 @@ def exists(filename):
         return False
 
 
-_image_counter = 0
+class ImageCounter:
+    def __init__(self):
+        self.count = 0
+
+    def get_next(self):
+        while True:
+            filename = f"/sd/img{self.count:04d}.jpg"
+            self.count += 1
+            if exists(filename):
+                continue
+            print("# writing to", filename)
+            return open(filename, "wb")
+
+
+_image_counter = ImageCounter()
 
 
 def open_next_image():
-    global _image_counter  # pylint: disable=global-statement
-    while True:
-        filename = f"/sd/img{_image_counter:04d}.jpg"
-        _image_counter += 1
-        if exists(filename):
-            continue
-        print("# writing to", filename)
-        return open(filename, "wb")
+    return _image_counter.get_next()
 
 
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_JPEG

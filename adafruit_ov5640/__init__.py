@@ -24,19 +24,19 @@ Implementation Notes
   https://github.com/adafruit/circuitpython/releases
 """
 
-# pylint: disable=too-many-lines
-# pylint: disable=too-many-public-methods
 # imports
 import time
+
 import imagecapture
 import pwmio
 from adafruit_bus_device.i2c_device import I2CDevice
 
 try:
-    from typing import Optional, Sequence, List, Union
+    from typing import List, Optional, Sequence, Union
+
     from busio import I2C
-    from microcontroller import Pin
     from digitalio import DigitalInOut
+    from microcontroller import Pin
 except ImportError:
     pass
 
@@ -927,9 +927,7 @@ class _RegBits:
 
     def __set__(self, obj: "OV5640", value: int) -> None:
         if value & ~self.mask:
-            raise ValueError(
-                f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}"
-            )
+            raise ValueError(f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}")
         reg_value = obj._read_register(self.reg)
         reg_value &= ~(self.mask << self.shift)
         reg_value |= value << self.shift
@@ -948,16 +946,14 @@ class _RegBits16:
 
     def __set__(self, obj: "OV5640", value: int) -> None:
         if value & ~self.mask:
-            raise ValueError(
-                f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}"
-            )
+            raise ValueError(f"Value 0x{value:02x} does not fit in mask 0x{self.mask:02x}")
         reg_value = obj._read_register16(self.reg)
         reg_value &= ~(self.mask << self.shift)
         reg_value |= value << self.shift
         obj._write_register16(self.reg, reg_value)
 
 
-class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
+class _SCCB16CameraBase:
     _finalize_firmware_load = (
         0x3022,
         0x00,
@@ -1023,7 +1019,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
                 self._write_register(register, value)
 
     def _write_reg_bits(self, reg: int, mask: int, enable: bool) -> None:
-        val = val = self._read_register(reg)
+        val = self._read_register(reg)
         if enable:
             val |= mask
         else:
@@ -1031,7 +1027,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         self._write_register(reg, val)
 
 
-class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
+class OV5640(_SCCB16CameraBase):
     """Control & Capture Images from an OV5640 Camera"""
 
     def __init__(
@@ -1048,7 +1044,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         i2c_address: int = 0x3C,
         size: int = OV5640_SIZE_QQVGA,
         init_autofocus: bool = True,
-    ):  # pylint: disable=too-many-arguments
+    ):
         """
         Args:
             i2c_bus (busio.I2C): The I2C bus used to configure the OV5640
@@ -1146,9 +1142,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
                 reg = offset + 0x8000
                 arr[0] = reg >> 8
                 arr[1] = reg & 0xFF
-                arr[2 : 2 + num_firmware_bytes] = firmware[
-                    offset : offset + num_firmware_bytes
-                ]
+                arr[2 : 2 + num_firmware_bytes] = firmware[offset : offset + num_firmware_bytes]
                 i2c.write(arr, end=2 + num_firmware_bytes)
 
         self._write_list(self._finalize_firmware_load)
@@ -1162,9 +1156,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     def autofocus_init(self):
         """Initialize the autofocus engine from ov5640_autofocus.bin"""
         if "/" in __file__:
-            binfile = (
-                __file__.rsplit("/", 1)[0].rsplit(".", 1)[0] + "/ov5640_autofocus.bin"
-            )
+            binfile = __file__.rsplit("/", 1)[0].rsplit(".", 1)[0] + "/ov5640_autofocus.bin"
         else:
             binfile = "ov5640_autofocus.bin"
         print(binfile)
@@ -1175,7 +1167,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         """Read the camera autofocus status register"""
         return self._read_register(_OV5640_CMD_FW_STATUS)
 
-    def _send_autofocus_command(self, command, msg):  # pylint: disable=unused-argument
+    def _send_autofocus_command(self, command, msg):
         self._write_register(_OV5640_CMD_ACK, 0x01)  # clear command ack
         self._write_register(_OV5640_CMD_MAIN, command)  # send command
         for _ in range(1000):
@@ -1202,9 +1194,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @property
     def autofocus_vcm_step(self):
         """Get the voice coil motor step location"""
-        if not self._send_autofocus_command(
-            _OV5640_CMD_AF_GET_VCM_STEP, "get vcm step"
-        ):
+        if not self._send_autofocus_command(_OV5640_CMD_AF_GET_VCM_STEP, "get vcm step"):
             return None
         return self._read_register(_OV5640_CMD_PARA4)
 
@@ -1268,7 +1258,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._colorspace = colorspace
         self._set_size_and_colorspace()
 
-    def _set_image_options(self) -> None:  # pylint: disable=too-many-branches
+    def _set_image_options(self) -> None:
         reg20 = reg21 = reg4514 = reg4514_test = 0
         if self.colorspace == OV5640_COLOR_JPEG:
             reg21 |= 0x20
@@ -1339,7 +1329,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         """Get or set the captured image size, one of the ``OV5640_SIZE_`` constants."""
         return self._size
 
-    def _set_size_and_colorspace(self) -> None:  # pylint: disable=too-many-locals
+    def _set_size_and_colorspace(self) -> None:
         size = self._size
         width, height, ratio = _resolution_info[size]
         self._w = width
@@ -1393,7 +1383,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._set_colorspace()
 
-    def _set_pll(  # pylint: disable=too-many-arguments
+    def _set_pll(
         self,
         bypass: bool,
         multiplier: int,
@@ -1404,7 +1394,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         pclk_manual: bool,
         pclk_div: int,
     ) -> None:
-        if (  # pylint: disable=too-many-boolean-expressions
+        if (
             multiplier > 252
             or multiplier < 4
             or sys_div > 15
@@ -1467,9 +1457,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @saturation.setter
     def saturation(self, value: int) -> None:
         if not -4 <= value <= 4:
-            raise ValueError(
-                "Invalid saturation {value}, use a value from -4..4 inclusive"
-            )
+            raise ValueError("Invalid saturation {value}, use a value from -4..4 inclusive")
         for offset, reg_value in enumerate(_sensor_saturation_levels[value]):
             self._write_register(0x5381 + offset, reg_value)
         self._saturation = value
@@ -1495,9 +1483,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @quality.setter
     def quality(self, value: int) -> None:
         if not 2 <= value <= 54:
-            raise ValueError(
-                f"Invalid quality value {value}, use a value from 2..54 inclusive"
-            )
+            raise ValueError(f"Invalid quality value {value}, use a value from 2..54 inclusive")
         self._write_register(_COMPRESSION_CTRL07, value & 0x3F)
 
     def _write_group_3_settings(self, settings):
@@ -1518,12 +1504,8 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @brightness.setter
     def brightness(self, value: int) -> None:
         if not -4 <= value <= 4:
-            raise ValueError(
-                "Invalid brightness value {value}, use a value from -4..4 inclusive"
-            )
-        self._write_group_3_settings(
-            [0x5587, abs(value) << 4, 0x5588, 0x9 if value < 0 else 0x1]
-        )
+            raise ValueError("Invalid brightness value {value}, use a value from -4..4 inclusive")
+        self._write_group_3_settings([0x5587, abs(value) << 4, 0x5588, 0x9 if value < 0 else 0x1])
 
     @property
     def contrast(self) -> int:
@@ -1537,9 +1519,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
     @contrast.setter
     def contrast(self, value: int) -> None:
         if not -3 <= value <= 3:
-            raise ValueError(
-                "Invalid contrast value {value}, use a value from -3..3 inclusive"
-            )
+            raise ValueError("Invalid contrast value {value}, use a value from -3..3 inclusive")
         setting = _contrast_settings[value]
         self._write_group_3_settings([0x5586, setting[0], 0x5585, setting[1]])
 
