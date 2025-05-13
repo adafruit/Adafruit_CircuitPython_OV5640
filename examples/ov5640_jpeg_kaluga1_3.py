@@ -17,12 +17,12 @@ board to make the internal flash readable by CircuitPython.
 
 import time
 
+import adafruit_ili9341
 import board
 import busio
 import displayio
 import microcontroller
 
-import adafruit_ili9341
 import adafruit_ov5640
 
 # Release any resources currently in use for the displays

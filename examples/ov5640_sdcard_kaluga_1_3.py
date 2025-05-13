@@ -23,6 +23,7 @@ Press the "Record" button on the audio daughterboard to take a photo.
 import os
 import time
 
+import adafruit_ili9341
 import analogio
 import board
 import busio
@@ -31,7 +32,6 @@ import neopixel
 import sdcardio
 import storage
 
-import adafruit_ili9341
 import adafruit_ov5640
 
 # Release any resources currently in use for the displays
@@ -79,18 +79,25 @@ def exists(filename):
         return False
 
 
-_image_counter = 0
+class ImageCounter:
+    def __init__(self):
+        self.count = 0
+
+    def get_next(self):
+        while True:
+            filename = f"/sd/img{self.count:04d}.jpg"
+            self.count += 1
+            if exists(filename):
+                continue
+            print("# writing to", filename)
+            return open(filename, "wb")
+
+
+_image_counter = ImageCounter()
 
 
 def open_next_image():
-    global _image_counter  # pylint: disable=global-statement
-    while True:
-        filename = f"/sd/img{_image_counter:04d}.jpg"
-        _image_counter += 1
-        if exists(filename):
-            continue
-        print("# writing to", filename)
-        return open(filename, "wb")
+    return _image_counter.get_next()
 
 
 cam.colorspace = adafruit_ov5640.OV5640_COLOR_JPEG
@@ -124,7 +131,5 @@ while True:
         except OSError as e:
             print(e)
         while record_pressed:
-            a_voltage = (
-                a.value * a.reference_voltage / 65535
-            )  # pylint: disable=no-member
+            a_voltage = a.value * a.reference_voltage / 65535  # pylint: disable=no-member
             record_pressed = abs(a_voltage - V_RECORD) < 0.05

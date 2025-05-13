@@ -17,11 +17,14 @@ on top of the previous one, rather than scrolling.
 
 Remember to take the lens cap off!
 """
+
 import sys
 import time
-import busio
+
 import board
+import busio
 import digitalio
+
 import adafruit_ov5640
 
 print("construct bus")
