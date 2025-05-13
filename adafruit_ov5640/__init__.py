@@ -24,8 +24,6 @@ Implementation Notes
   https://github.com/adafruit/circuitpython/releases
 """
 
-# pylint: disable=too-many-lines
-# pylint: disable=too-many-public-methods
 # imports
 import time
 
@@ -955,7 +953,7 @@ class _RegBits16:
         obj._write_register16(self.reg, reg_value)
 
 
-class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
+class _SCCB16CameraBase:
     _finalize_firmware_load = (
         0x3022,
         0x00,
@@ -1029,7 +1027,7 @@ class _SCCB16CameraBase:  # pylint: disable=too-few-public-methods
         self._write_register(reg, val)
 
 
-class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
+class OV5640(_SCCB16CameraBase):
     """Control & Capture Images from an OV5640 Camera"""
 
     def __init__(
@@ -1046,7 +1044,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         i2c_address: int = 0x3C,
         size: int = OV5640_SIZE_QQVGA,
         init_autofocus: bool = True,
-    ):  # pylint: disable=too-many-arguments
+    ):
         """
         Args:
             i2c_bus (busio.I2C): The I2C bus used to configure the OV5640
@@ -1169,7 +1167,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         """Read the camera autofocus status register"""
         return self._read_register(_OV5640_CMD_FW_STATUS)
 
-    def _send_autofocus_command(self, command, msg):  # pylint: disable=unused-argument
+    def _send_autofocus_command(self, command, msg):
         self._write_register(_OV5640_CMD_ACK, 0x01)  # clear command ack
         self._write_register(_OV5640_CMD_MAIN, command)  # send command
         for _ in range(1000):
@@ -1260,7 +1258,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         self._colorspace = colorspace
         self._set_size_and_colorspace()
 
-    def _set_image_options(self) -> None:  # pylint: disable=too-many-branches
+    def _set_image_options(self) -> None:
         reg20 = reg21 = reg4514 = reg4514_test = 0
         if self.colorspace == OV5640_COLOR_JPEG:
             reg21 |= 0x20
@@ -1331,7 +1329,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         """Get or set the captured image size, one of the ``OV5640_SIZE_`` constants."""
         return self._size
 
-    def _set_size_and_colorspace(self) -> None:  # pylint: disable=too-many-locals
+    def _set_size_and_colorspace(self) -> None:
         size = self._size
         width, height, ratio = _resolution_info[size]
         self._w = width
@@ -1385,7 +1383,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
 
         self._set_colorspace()
 
-    def _set_pll(  # pylint: disable=too-many-arguments
+    def _set_pll(
         self,
         bypass: bool,
         multiplier: int,
@@ -1396,7 +1394,7 @@ class OV5640(_SCCB16CameraBase):  # pylint: disable=too-many-instance-attributes
         pclk_manual: bool,
         pclk_div: int,
     ) -> None:
-        if (  # pylint: disable=too-many-boolean-expressions
+        if (
             multiplier > 252
             or multiplier < 4
             or sys_div > 15

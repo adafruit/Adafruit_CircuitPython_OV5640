@@ -131,21 +131,21 @@ def special_modes(cam_obj):
             yield
         cam_obj.contrast = 0
 
-    def white_balance_modes(cam_obj):  # pylint: disable=unused-variable
+    def white_balance_modes(cam_obj):
         for i in ["AUTO", "SUNNY", "FLUORESCENT", "CLOUDY", "INCANDESCENT"]:
             print(f"White Balance {i}")
             cam_obj.white_balance = getattr(adafruit_ov5640, f"OV5640_WHITE_BALANCE_{i}")
             yield
         cam_obj.white_balance = adafruit_ov5640.OV5640_WHITE_BALANCE_AUTO
 
-    def exposure_value_modes(cam_obj):  # pylint: disable=unused-variable
+    def exposure_value_modes(cam_obj):
         for i in range(-3, 4):
             print(f"EV {i}")
             cam_obj.exposure_value = i
             yield
         cam_obj.exposure_value = 0
 
-    def nite_modes(cam_obj):  # pylint: disable=unused-variable
+    def nite_modes(cam_obj):
         print("Night Mode On")
         cam_obj.night_mode = True
         print(cam_obj.night_mode)

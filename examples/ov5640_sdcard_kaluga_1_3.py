@@ -108,7 +108,7 @@ print("Press 'record' button to take a JPEG image")
 while True:
     pixel[0] = 0x0000FF
     pixel.write()
-    a_voltage = a.value * a.reference_voltage / 65535  # pylint: disable=no-member
+    a_voltage = a.value * a.reference_voltage / 65535
     record_pressed = abs(a_voltage - V_RECORD) < 0.05
     if record_pressed:
         pixel[0] = 0xFF0000
@@ -131,5 +131,5 @@ while True:
         except OSError as e:
             print(e)
         while record_pressed:
-            a_voltage = a.value * a.reference_voltage / 65535  # pylint: disable=no-member
+            a_voltage = a.value * a.reference_voltage / 65535
             record_pressed = abs(a_voltage - V_RECORD) < 0.05

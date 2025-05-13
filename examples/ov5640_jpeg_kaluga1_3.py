@@ -78,7 +78,7 @@ try:
     print("Wrote to CIRCUITPY/cam.jpg")
     print("Resetting so computer sees new content of CIRCUITPY")
     time.sleep(0.5)
-    microcontroller.reset()  # pylint: disable=no-member
+    microcontroller.reset()
 
 except OSError as e:
     print(e)
