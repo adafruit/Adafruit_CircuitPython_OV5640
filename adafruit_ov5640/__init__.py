@@ -1511,7 +1511,9 @@ class OV5640(_SCCB16CameraBase):
     def contrast(self) -> int:
         """Sensor contrast adjustment, from -4 to 4 inclusive"""
         try:
-            value = _contrast_settings.index([self._read_register(0x5586), self._read_register(0x5585)])
+            value = _contrast_settings.index(
+                [self._read_register(0x5586), self._read_register(0x5585)]
+            )
         except ValueError:
             value = 0
         if value > 3:
