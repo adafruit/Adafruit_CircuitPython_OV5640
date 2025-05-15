@@ -1509,7 +1509,7 @@ class OV5640(_SCCB16CameraBase):
 
     @property
     def contrast(self) -> int:
-        """Sensor contrast adjustment, from -4 to 4 inclusive"""
+        """Sensor contrast adjustment, from -3 to 3 inclusive"""
         try:
             value = _contrast_settings.index(
                 [self._read_register(0x5586), self._read_register(0x5585)]
