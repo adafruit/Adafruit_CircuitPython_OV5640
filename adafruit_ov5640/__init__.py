@@ -1118,6 +1118,8 @@ class OV5640(_SCCB16CameraBase):
         self._ev = 0
         self._white_balance = 0
         self.size = size
+        self._saturation = 0
+        self._effect = OV5640_SPECIAL_EFFECT_NONE
 
         if init_autofocus:
             self.autofocus_init()
