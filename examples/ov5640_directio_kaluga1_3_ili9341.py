@@ -19,9 +19,11 @@ the one which usually uses rotation=90 to get a landscape display.
 import struct
 
 import board
+import busdisplay
 import busio
 import digitalio
 import displayio
+import fourwire
 from adafruit_ticks import ticks_less, ticks_ms
 
 import adafruit_ov5640
@@ -36,7 +38,7 @@ state = digitalio.DigitalInOut(board.IO4)
 state.switch_to_output(True)
 
 spi = busio.SPI(MOSI=board.LCD_MOSI, clock=board.LCD_CLK)
-display_bus = displayio.FourWire(
+display_bus = fourwire.FourWire(
     spi,
     command=board.LCD_D_C,
     chip_select=board.LCD_CS,
@@ -69,7 +71,7 @@ _INIT_SEQUENCE = (
     b"\x29\x80\x78"  # Display on then delay 0x78 (120ms)
 )
 
-display = displayio.Display(display_bus, _INIT_SEQUENCE, width=320, height=240)
+display = busdisplay.BusDisplay(display_bus, _INIT_SEQUENCE, width=320, height=240)
 
 bus = busio.I2C(scl=board.CAMERA_SIOC, sda=board.CAMERA_SIOD)
 cam = adafruit_ov5640.OV5640(
