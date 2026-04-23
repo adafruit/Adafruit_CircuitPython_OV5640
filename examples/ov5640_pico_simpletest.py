@@ -75,7 +75,7 @@ sys.stdout.write("\033[2J")
 while True:
     cam.capture(buf)
     for j in range(0, cam.height, 2):
-        sys.stdout.write(f"\033[{j//2}H")
+        sys.stdout.write(f"\033[{j // 2}H")
         for i in range(cam.width):
             row[i] = remap[buf[2 * (width * j + i)]]
         sys.stdout.write(row)
