@@ -1230,7 +1230,7 @@ class OV5640(_SCCB16CameraBase):
         if self.colorspace == OV5640_COLOR_JPEG:
             #  This is somewhat arbirary but seems to work for a wide range of JPEG images
             #  the user can chose to further scale the buffer in the user code  if necessary
-            return 2 * (self.width * self.height // self.quality)
+            return self.width * self.height // 5  # better heuristic independent of quality, per issue #26
         if self.colorspace == OV5640_COLOR_GRAYSCALE:
             return self.width * self.height
         return self.width * self.height * 2
